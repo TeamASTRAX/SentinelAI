@@ -1,101 +1,194 @@
-# SentinelAI
+🛡️ SentinelAI
+Explainable AI-Powered Behavioral Threat Detection
+🚨 The Problem
+Traditional security systems often rely heavily on predefined signatures and static thresholds.
+But sophisticated threats don't always look obviously malicious.
+An attacker using a legitimate employee account may:
+Log in from an unusual location
+Access files outside their normal working pattern
+Escalate privileges
+Perform sensitive actions at unusual times
+Move laterally across systems
+Combine several individually harmless actions into a suspicious sequence
+The real question isn't simply:
+"Did something unusual happen?"
+It's:
+"How unusual is it, why is it unusual, and how risky is the overall behavior?"
+🧠 What is SentinelAI?
+SentinelAI is an explainable behavioral threat-detection prototype designed to identify suspicious activity across:
+👤 Identity behavior
+💻 Device activity
+🔐 Privilege usage
+📁 File access
+🌐 Network/location context
+🔄 Behavioral sequences
+Instead of depending on a single ML prediction, SentinelAI combines:
+Behavioral Baselines + Machine Learning + Deterministic Rules + Contextual Correlation
+to produce a 0–100 risk score with human-readable explanations.
+The project currently runs as a local modular monolith using Python, Streamlit, SQLite, and scikit-learn, with deterministic synthetic data for reproducible demonstrations.
+✨ Key Features
+🔍 Behavioral Anomaly Detection
+SentinelAI builds behavioral profiles from historical normal activity and detects deviations from those patterns.
+Profiles can represent:
+Personal behavior
+Department/role peer behavior
+Global behavior
+Current events are deliberately excluded from their own baseline to prevent the detection system from normalizing the anomaly it is supposed to detect.
+🤖 AI-Based Detection
+The system uses an Isolation Forest model to rank anomalous behavior.
+The model uses:
+Fixed feature ordering
+Reproducible preprocessing
+Fixed random seed
+Empirical normal-history percentile ranking
+Important: The anomaly percentile represents relative abnormality, not attack probability.
+🧩 Explainable Rule Engine
+Machine learning alone doesn't tell an analyst why an event is suspicious.
+SentinelAI therefore combines ML with deterministic rules that expose:
+Observed Value
+      ↓
+Expected Value
+      ↓
+Deviation
+      ↓
+Rule Contribution
+      ↓
+Human-readable Reason
 
-SentinelAI is an explainable behavioural threat-detection prototype for identity, device, privilege, and file-activity events. The initial architecture is a local modular monolith using Python, Streamlit, SQLite, and scikit-learn.
+This makes alerts easier to investigate and understand.
+🎯 Hybrid Risk Scoring
+Instead of trusting a single detector, SentinelAI fuses multiple signals:
+                 ┌─────────────────┐
+                 │ Behavioral Data │
+                 └────────┬────────┘
+                          │
+              ┌───────────┴───────────┐
+              ↓                       ↓
+       ┌─────────────┐         ┌─────────────┐
+       │ ML Anomaly  │         │ Rule Engine │
+       │   Score     │         │   Signals   │
+       └──────┬──────┘         └──────┬──────┘
+              │                       │
+              └───────────┬───────────┘
+                          ↓
+                ┌───────────────────┐
+                │ Context / Sequence│
+                │    Correlation    │
+                └─────────┬─────────┘
+                          ↓
+                 ┌────────────────┐
+                 │ Hybrid Risk    │
+                 │   Score 0–100  │
+                 └───────┬────────┘
+                         ↓
+                 ┌────────────────┐
+                 │ Explainable    │
+                 │     Alert      │
+                 └────────────────┘
 
-The repository contains a working local prototype with deterministic synthetic data, personal and department/role peer behaviour profiles, feature engineering, Isolation Forest anomaly ranking, explainable rules, hybrid risk scoring, SQLite persistence, simulations, tests, and a Streamlit SOC interface.
-
-## Quick start
-
-Requires Python 3.11 or newer.
-
-```bash
-python3.11 -m venv .venv
-.venv/bin/pip install -e '.[dev]'
-.venv/bin/python scripts/initialize_demo.py --reseed
-.venv/bin/streamlit run app.py
-```
-
-Run the complete test suite with:
-
-```bash
-.venv/bin/pytest
-```
-
-The database is created at `data/sentinel_ai.db`. It is local runtime state and is ignored by Git.
-
-## Demo deployment database initialization
-
-API deployments do not seed data by default. To initialize the existing deterministic SentinelAI dataset when—and only when—the configured database has no employees, set:
-
-```bash
-SENTINEL_BOOTSTRAP_DEMO_DATA=true
-```
-
-Startup is idempotent: an already-populated database is preserved, including Attack Lab runs and their linked events. The bootstrap calls the same `generate_dataset()` and detection pipeline used by local development; it does not insert MITRE mappings. MITRE stories and graph findings continue to be derived at request time from seeded events, detections, alerts, sequences, and graph relationships.
-
-For Render, mount a persistent disk and set `SENTINEL_DATABASE_PATH` to a file on that mount (for example `/var/data/sentinel_ai.db`). Without a persistent disk, Render filesystem state is ephemeral and the empty database will be recreated and bootstrapped after a replacement instance starts. Keep `SENTINEL_BOOTSTRAP_DEMO_DATA` unset or `false` for non-demo production environments.
-
-## Simulated containment
-
-The response policy consumes the already-persisted production risk score. By default, a score at the configured maximum triggers an internal block and session revocation:
-
-```bash
+The final score is a capped combination of rule, AI, and contextual-correlation contributions.
+🧪 Attack Lab & Scenario Simulation
+SentinelAI includes deterministic scenarios that allow suspicious behavioral patterns to be reproduced and investigated.
+This makes the project useful for:
+Security demonstrations
+Model evaluation
+Testing detection logic
+Reproducing attack stories
+Understanding alert generation
+Because the demo dataset is deterministic, the same scenario can be reproduced consistently.
+🖥️ SOC Dashboard
+SentinelAI includes a Streamlit-based Security Operations Center interface for exploring:
+Alerts
+Risk scores
+Behavioral activity
+Detection reasons
+Attack scenarios
+Event sequences
+Investigation data
+The UI is backed by application services rather than directly manipulating detection logic or generating alerts itself.
+🛑 Simulated Automated Containment
+SentinelAI supports simulated response actions when configured risk thresholds are reached.
+Example:
 AUTO_CONTAINMENT_ENABLED=true
 AUTO_CONTAINMENT_RISK_THRESHOLD=100
-```
 
-Current containment uses `SimulationContainmentAdapter`. It changes only SentinelAI's persisted demonstration state and append-only response audit history; it does not disable an enterprise account, revoke real identity-provider tokens, isolate endpoints, or call an external service. The adapter interface is the future integration boundary for an authenticated and authorized enterprise IAM provider.
+The current implementation uses a SimulationContainmentAdapter.
+It does not:
+Disable real enterprise accounts
+Revoke real identity-provider tokens
+Isolate real endpoints
+Call external security services
+Instead, it records the simulated response in SentinelAI's persisted demonstration state and audit history.
+🏗️ Architecture
+                         ┌──────────────────────┐
+                         │     Event Sources    │
+                         │ Identity / Device /  │
+                         │ File / Privilege     │
+                         └──────────┬───────────┘
+                                    │
+                                    ▼
+                         ┌──────────────────────┐
+                         │      Ingestion       │
+                         │ Validation &          │
+                         │ Normalization         │
+                         └──────────┬───────────┘
+                                    │
+                                    ▼
+                         ┌──────────────────────┐
+                         │    Feature Engine    │
+                         │ Prior-only windows   │
+                         │ Behavioral features  │
+                         └──────────┬───────────┘
+                                    │
+                    ┌───────────────┼───────────────┐
+                    ▼               ▼               ▼
+             ┌────────────┐ ┌────────────┐ ┌────────────┐
+             │ Personal   │ │ Peer/Role  │ │  Global    │
+             │ Baseline   │ │ Baseline   │ │  Baseline  │
+             └─────┬──────┘ └─────┬──────┘ └─────┬──────┘
+                   │              │              │
+                   └──────────────┼──────────────┘
+                                  ▼
+                    ┌────────────────────────┐
+                    │   Detection Engine     │
+                    │                        │
+                    │ • Isolation Forest     │
+                    │ • Rules                │
+                    │ • Sequences            │
+                    │ • Context Correlation  │
+                    └────────────┬───────────┘
+                                 │
+                                 ▼
+                    ┌────────────────────────┐
+                    │   Hybrid Risk Score    │
+                    │        0 — 100         │
+                    └────────────┬───────────┘
+                                 │
+                                 ▼
+                    ┌────────────────────────┐
+                    │ Explainable Alert      │
+                    │ + Evidence             │
+                    │ + Reason Codes         │
+                    └────────────┬───────────┘
+                                 │
+                    ┌────────────┴────────────┐
+                    ▼                         ▼
+             ┌──────────────┐        ┌────────────────┐
+             │ SOC Dashboard │        │ Response /     │
+             │   Streamlit   │        │ Containment    │
+             └──────────────┘        │   Simulation   │
+                                     └────────────────┘
 
-## Repository layout
-
-```text
-.
-├── artifacts/              # Generated model and evaluation artifacts (not source)
-├── config/                 # Versioned model, rule, and scenario configuration
-├── data/
-│   ├── raw/                # Imported source data; ignored by Git
-│   ├── processed/          # Rebuildable normalized/feature data; ignored by Git
-│   └── synthetic/          # Small deterministic demo fixtures safe to version
-├── docs/
-│   ├── architecture/       # Architecture decisions and contracts
-│   └── research/           # Evidence-backed technical research
-├── scripts/                # Explicit developer and demo entry points
-├── app.py                  # Streamlit entry point
-├── pyproject.toml          # Package metadata and dependencies
-├── src/sentinel_ai/
-│   ├── domain/             # Typed events, alerts, evidence, enums, reason codes
-│   ├── ingestion/          # Validation and normalization of incoming events
-│   ├── storage/            # SQLite connections, migrations, and repositories
-│   ├── features/           # Prior-only windows and feature extraction
-│   ├── baselines/          # Personal, peer, and global behavior profiles
-│   ├── models/             # Replaceable anomaly-detector interfaces/adapters
-│   ├── detection/          # Rules, sequences, risk fusion, and explanations
-│   ├── services/           # Application orchestration/use cases
-│   ├── demo/               # Seeded scenarios and replay support
-│   └── ui/                 # Streamlit rendering backed by services
-└── tests/
-    ├── unit/               # Pure scoring, feature, rule, and travel tests
-    ├── integration/        # SQLite and service-boundary tests
-    ├── scenarios/          # End-to-end deterministic attack stories
-    └── fixtures/           # Shared test-only data
-```
-
-## Dependency boundaries
-
-- `domain` contains shared types and must not import infrastructure or UI code.
-- `ingestion`, `features`, `baselines`, `models`, and `detection` implement focused domain capabilities.
-- `services` coordinates those capabilities and is the only layer the UI should call.
-- `storage` owns SQLite details; SQL must not leak into models, detection logic, or Streamlit pages.
-- `ui` renders persisted/service data and must not invent alerts or model scores.
-- `demo` generates deterministic inputs, never alternate scoring behavior.
-
-The research basis for this structure is in `docs/research/threat-detection-research.md`.
-
-## Detection design
-
-- Profiles are calculated from historical normal events only; current events are not added to their own baseline.
-- One global Isolation Forest uses a fixed feature order, preprocessing pipeline, random seed, and empirical normal-history percentile.
-- The percentile is a relative anomaly rank, not an attack probability.
-- Deterministic rules return a contribution, observed value, expected value, and readable reason.
-- The final 0–100 score is the capped sum of rule, AI, and contextual-correlation contributions.
-- Responses are recommendations and simulations only; the application performs no destructive security action.
+🔬 Detection Pipeline
+SentinelAI follows a layered detection strategy:
+1. Event Ingestion
+Incoming events are validated and normalized into a consistent internal representation.
+2. Feature Engineering
+Historical activity is transformed into behavioral features using prior-only windows.
+3. Behavioral Profiling
+The system establishes expected behavior using:
+Personal history
+Peer/department behavior
+Global behavior
+4. ML Anomaly Detection
+Isolation Forest identifies observations that deviate from learned n
