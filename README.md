@@ -85,7 +85,7 @@ These signals are then combined to generate an explainable **0–100 risk score*
 
 ## ✨ Key Features
 
-### 🔍 Behavioral Anomaly Detection
+### 🔍 Behavioral Anomaly Detection + Quantum model
 
 SentinelAI establishes behavioral baselines using historical activity.
 
