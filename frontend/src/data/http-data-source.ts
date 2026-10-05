@@ -1,5 +1,5 @@
 import "server-only";
-import type { ActivityFilters, ActivityRecord, AttackLabRun, AttackLabScenario, CreateAttackLabRun, ModelEvaluationReport, ModelMetadata, OperationsOverview, PageResult, QuantumEvaluationReport, SystemCounts, SystemStatusSnapshot, ThreatFilters, ThreatSummary, UserDetail, UserFilters, UserSummary, GraphOverview, GraphEntityDetail, GraphEventContext, GraphAttackRunContext, GraphFinding, GraphData, GraphFilters, MitreCatalog, MitreOverview, MitreReport, ContainmentState, ResponseHistory } from "@/domain/sentinel";
+import type { ActivityFilters, ActivityRecord, AttackLabRun, AttackLabScenario, CreateAttackLabRun, ModelEvaluationReport, ModelMetadata, OperationsOverview, PageResult, QuantumEvaluationReport, QuantumStatus, QuantumEventAnalysis, SystemCounts, SystemStatusSnapshot, ThreatFilters, ThreatSummary, UserDetail, UserFilters, UserSummary, GraphOverview, GraphEntityDetail, GraphEventContext, GraphAttackRunContext, GraphFinding, GraphData, GraphFilters, MitreCatalog, MitreOverview, MitreReport, ContainmentState, ResponseHistory } from "@/domain/sentinel";
 
 import type { SentinelDataSource } from "@/data/sentinel-data-source";
 
@@ -97,6 +97,15 @@ export class HttpDataSource implements SentinelDataSource {
   listModels() { return this.get<ModelMetadata[]>("/api/models"); }
   getModelEvaluation() { return this.get<ModelEvaluationReport>("/api/models/evaluation"); }
   getQuantumEvaluation() { return this.get<QuantumEvaluationReport>("/api/models/quantum"); }
+  getQuantumStatus() { return this.get<QuantumStatus>("/api/quantum/status"); }
+  async getQuantumEventAnalysis(eventId: string) {
+    try {
+      return await this.get<QuantumEventAnalysis>(`/api/quantum/events/${encodeURIComponent(eventId)}/analysis`);
+    } catch (error) {
+      if (error instanceof SentinelApiError && error.status === 404) return null;
+      throw error;
+    }
+  }
 
   async getGraphOverview(): Promise<GraphOverview> {
     return this.get<GraphOverview>("/api/graph/overview");

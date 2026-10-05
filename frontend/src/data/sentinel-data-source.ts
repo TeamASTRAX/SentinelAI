@@ -28,6 +28,8 @@ import type {
   MitreReport,
   ContainmentState,
   ResponseHistory,
+  QuantumStatus,
+  QuantumEventAnalysis,
 } from "@/domain/sentinel";
 
 export interface SentinelDataSource {
@@ -46,6 +48,8 @@ export interface SentinelDataSource {
   listModels(): Promise<ModelMetadata[]>;
   getModelEvaluation(): Promise<ModelEvaluationReport | null>;
   getQuantumEvaluation(): Promise<QuantumEvaluationReport>;
+  getQuantumStatus(): Promise<QuantumStatus>;
+  getQuantumEventAnalysis(eventId: string): Promise<QuantumEventAnalysis | null>;
   getGraphOverview(): Promise<GraphOverview>;
   getGraphData(filters?: GraphFilters): Promise<GraphData>;
   getGraphEntityDetail(entityType: string, entityId: string): Promise<GraphEntityDetail | null>;

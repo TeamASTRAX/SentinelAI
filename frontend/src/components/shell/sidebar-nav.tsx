@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Activity, BrainCircuit, FlaskConical, LayoutDashboard, ShieldAlert, UserRoundSearch, Share2, Crosshair } from "lucide-react";
+import { Activity, Atom, BrainCircuit, FlaskConical, LayoutDashboard, ShieldAlert, UserRoundSearch, Share2, Crosshair } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { plannedModules, type PlannedModuleSlug } from "@/config/navigation";
 import { cn } from "@/lib/utils";
@@ -15,6 +15,7 @@ const primary = [
   { href: "/threats", label: "Alert Investigation", icon: ShieldAlert },
   { href: "/threat-intelligence", label: "Threat Intelligence", icon: Crosshair },
   { href: "/models", label: "Models", icon: BrainCircuit },
+  { href: "/quantum", label: "Quantum Analysis", icon: Atom },
   { href: "/graph", label: "Graph Analysis", icon: Share2 },
 ];
 const plannedIcons: Record<PlannedModuleSlug, LucideIcon> = {

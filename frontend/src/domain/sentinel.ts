@@ -428,6 +428,105 @@ export interface QuantumEvaluationReport {
   limitations?: string[];
 }
 
+export interface QuantumStatus {
+  status: string;
+  backend: string;
+  simulation: boolean;
+  realQuantumHardware: boolean;
+  qubits: number;
+  quantumKernelStatus: string;
+  vqcStatus: string;
+  affectsProductionRisk: false;
+  reason?: string;
+}
+
+export interface QuantumFeatureMapping {
+  feature: string;
+  label: string;
+  qubit: number;
+  sourceFeature: string;
+  normalization: string;
+}
+
+export interface QuantumCircuitAnalysis {
+  eventId: string;
+  employee: string;
+  originalFeatureValues: Record<string, number>;
+  normalizedFeatureValues: Record<string, number>;
+  featureQubitMapping: QuantumFeatureMapping[];
+  qubits: number;
+  rotationParameters: { feature: string; qubit: number; ryRadians: number; rzRadians: number }[];
+  gateSequence: string[];
+  entanglementStructure: string;
+  circuitDiagram: string;
+  backend: string;
+  simulation: true;
+  affectsProductionRisk: false;
+}
+
+export interface QuantumKernelResult {
+  similarityToNormalBaseline: number;
+  anomalyScore: number;
+  scoreMeaning: string;
+  interpretation: string;
+  normalBaselineRows: number;
+  normalBaselineVector: Record<string, number>;
+  featureDimensions: number;
+  executionBackend: string;
+  executionTimeMs: number;
+  experimental: true;
+  affectsProductionRisk: false;
+}
+
+export interface VqcResult {
+  prediction: "NORMAL" | "SUSPICIOUS";
+  modelScore: number;
+  scoreMeaning: string;
+  modelType: "VQC";
+  qubits: number;
+  ansatz: string;
+  trainingRows: number;
+  optimizer: string;
+  executionBackend: string;
+  executionTimeMs: number;
+  experimental: true;
+  affectsProductionRisk: false;
+}
+
+export interface QuantumComparison {
+  eventId: string;
+  classicalModel: { model: string; prediction: string; anomalyScore: number | null; scoreMeaning: string; featuresUsed: string[]; featureDimensions: number; executionBackend: string; simulation: false };
+  quantumKernel: QuantumKernelResult & { model: string; featuresUsed: string[]; simulation: true };
+  vqc: VqcResult & { featuresUsed: string[]; featureDimensions: number; simulation: true };
+  disclosure: string;
+  affectsProductionRisk: false;
+}
+
+export interface QuantumThreatSimilarity {
+  items: { profile: string; similarity: number; referenceVector: Record<string, number> }[];
+  scoreMeaning: string;
+  executionBackend: string;
+  executionTimeMs: number;
+  experimental: true;
+  affectsProductionRisk: false;
+}
+
+export interface QuantumEventAnalysis {
+  eventId: string;
+  employee: { employeeId: string; employeeName: string; department: string };
+  occurredAt: string;
+  activityType: string;
+  scenario: string;
+  circuit: QuantumCircuitAnalysis;
+  quantumKernel: QuantumKernelResult;
+  vqc: VqcResult;
+  comparison: QuantumComparison;
+  threatSimilarity: QuantumThreatSimilarity;
+  experimental: true;
+  affectsProductionRisk: false;
+  limitations: string[];
+}
+
 // Graph Analysis types
 export type GraphNodeType = "employee" | "event" | "device" | "ip_address" | "location" | "file" | "department" | "attack_run";
 export type GraphEdgeType = "USES_DEVICE" | "USED_DEVICE" | "CONNECTS_FROM" | "CONNECTED_FROM" | "LOGS_IN_FROM" | "OCCURRED_AT" | "ACCESSES_FILE" | "ACCESSED_FILE" | "GENERATED" | "BELONGS_TO" | "PART_OF_ATTACK_RUN" | "ASSOCIATED_WITH_ATTACK";

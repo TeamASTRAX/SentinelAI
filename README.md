@@ -97,3 +97,67 @@ Personal Baseline
 Peer / Role Baseline
        +
 Global Baseline
+```
+
+## Quantum AI Architecture
+
+SentinelAI includes a separate experimental quantum-analysis plane for hackathon research. It is read-only with respect to the production detection pipeline: quantum output does not change risk scores, alerts, alert severity, MITRE mappings, graph findings, or simulated containment.
+
+### Four-qubit behavioural encoding
+
+| Qubit | Behavioural feature | Existing SentinelAI source | Normalization |
+| --- | --- | --- | --- |
+| q0 | Login-time deviation | `login_hour_deviation` | `clamp(hours / 12, 0, 1)` |
+| q1 | Failed-login behaviour | `failed_login_count` | `clamp(count / 10, 0, 1)` |
+| q2 | Download-volume anomaly | positive maximum of `download_count_deviation` and `download_size_deviation` | `clamp(deviation / 5, 0, 1)` |
+| q3 | Device/location anomaly | `unknown_device` and `location_anomaly` | mean of the two binary signals |
+
+Each normalized value `x` is encoded with `RY(πx)` followed by `RZ(πx/2)`. A CX ring (`q0→q1→q2→q3→q0`) adds entanglement. The same reusable circuit is used by the event visualizer, fidelity kernel, threat-profile comparison, and notebook.
+
+### Quantum models and comparison
+
+- **Quantum fidelity kernel:** exact local statevector fidelity, `|⟨φ(x)|φ(y)⟩|²`. Event anomaly is reported as `1 − similarity`; neither value is an attack probability.
+- **VQC:** a lightweight four-qubit variational circuit with two RY parameter layers, eight trainable angles, and linear CX entanglement. It trains once per process with deterministic initialization on 12 representative demo rows and is reused for subsequent requests. Its model score is not calibrated confidence.
+- **Classical comparison:** displays the persisted Isolation Forest result alongside the two quantum outputs for the same event without changing the classical model or risk calculation.
+- **Threat similarity:** computes real fidelity-kernel similarities to encoded Normal Behaviour, Credential Compromise, Suspicious Data Collection, and Account Manipulation reference profiles.
+
+Circuits are constructed with **Qiskit** and request-time analysis uses a local, noiseless, exact Qiskit-compatible 16-amplitude statevector executor. This avoids native simulator thread instability in FastAPI workers while preserving the same four-qubit gate mathematics. It does not use real quantum hardware and does not model hardware noise. The representative dataset is intentionally small, the classical and quantum feature spaces differ, and no production accuracy, quantum advantage, quantum supremacy, or superiority over classical ML is claimed.
+
+### Quantum API
+
+```text
+GET /api/quantum/status
+GET /api/quantum/models
+GET /api/quantum/events/{event_id}/analysis
+GET /api/quantum/events/{event_id}/circuit
+GET /api/quantum/events/{event_id}/comparison
+GET /api/quantum/events/{event_id}/similarity
+```
+
+All frontend payloads use camelCase, return structured 404 errors for unknown events, and include `affectsProductionRisk: false` on experimental output.
+
+### Run the hackathon notebook
+
+From the repository root:
+
+```bash
+source .venv/bin/activate
+pip install -e '.[notebook]'
+jupyter notebook notebooks/sentinelai_quantum_demo.ipynb
+```
+
+The notebook generates representative SentinelAI data, encodes and visualizes the circuit, runs kernel similarity and VQC inference, compares Isolation Forest output, and explains limitations. If Jupyter is not already available, use any notebook environment with the project dependencies from `pyproject.toml` installed.
+
+## Getting Started
+
+```bash
+source .venv/bin/activate
+uvicorn sentinel_ai.api.app:create_app --factory --reload
+```
+
+In another terminal, start the frontend in live API mode:
+
+```bash
+cd frontend
+SENTINEL_DATA_SOURCE=http SENTINEL_API_BASE_URL=http://127.0.0.1:8000 npm run dev
+```

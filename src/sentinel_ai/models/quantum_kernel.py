@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from functools import lru_cache
 from importlib.metadata import version
-from math import pi
 from time import perf_counter
 from typing import Any
 
@@ -17,6 +16,7 @@ from sentinel_ai.baselines import build_behavioural_assessment
 from sentinel_ai.domain import ActivityEvent, AnomalyAssessment, BehaviouralAssessment, FeatureVector
 from sentinel_ai.models.evaluation import classification_metrics, prepare_evaluation_dataset
 from sentinel_ai.models.isolation_forest import IsolationForestDetector
+from sentinel_ai.quantum.analysis import FEATURE_KEYS, quantum_kernel_similarity
 
 
 QUANTUM_FEATURES = ("personal_deviation", "peer_deviation", "login_hour", "combined_novelty")
@@ -63,14 +63,6 @@ def _quantum_row(event: ActivityEvent, features: FeatureVector, assessment: Beha
 def evaluate_quantum_kernel() -> dict[str, Any]:
     started = perf_counter()
     try:
-        from qiskit.circuit.library import zz_feature_map
-        from qiskit_aer.primitives import SamplerV2 as AerSampler
-        from qiskit_machine_learning.kernels import FidelityQuantumKernel
-        from qiskit_machine_learning.state_fidelities import ComputeUncompute
-    except Exception as error:
-        return {"status": "unavailable", "reason": f"Quantum dependencies unavailable: {error}", "affectsProductionRisk": False}
-
-    try:
         dataset = prepare_evaluation_dataset()
         quantum_training = list(dataset.training[:16])
         evaluation = list(dataset.normal_test[:8]) + list(dataset.anomaly_test[:8])
@@ -84,16 +76,20 @@ def evaluate_quantum_kernel() -> dict[str, Any]:
             history.append(event)
         raw_train = np.asarray([_quantum_row(event, features, assessments[event.event_id]) for event, features in quantum_training], dtype=float)
         raw_test = np.asarray([_quantum_row(event, features, assessments[event.event_id]) for event, features in evaluation], dtype=float)
-        scaler = MinMaxScaler(feature_range=(0.0, pi))
+        scaler = MinMaxScaler(feature_range=(0.0, 1.0))
         train_matrix = scaler.fit_transform(raw_train)
         test_matrix = scaler.transform(raw_test)
 
-        sampler = AerSampler(default_shots=256, seed=config.RANDOM_SEED)
-        fidelity = ComputeUncompute(sampler=sampler)
-        feature_map = zz_feature_map(feature_dimension=4, reps=2, entanglement="linear")
-        kernel = FidelityQuantumKernel(feature_map=feature_map, fidelity=fidelity, enforce_psd=True)
-        training_kernel = kernel.evaluate(x_vec=train_matrix)
-        test_kernel = kernel.evaluate(x_vec=test_matrix, y_vec=train_matrix)
+        train_documents = [dict(zip(FEATURE_KEYS, row, strict=True)) for row in train_matrix]
+        test_documents = [dict(zip(FEATURE_KEYS, row, strict=True)) for row in test_matrix]
+        training_kernel = np.asarray([
+            [quantum_kernel_similarity(left, right) for right in train_documents]
+            for left in train_documents
+        ])
+        test_kernel = np.asarray([
+            [quantum_kernel_similarity(left, right) for right in train_documents]
+            for left in test_documents
+        ])
         estimator = OneClassSVM(kernel="precomputed", nu=0.1)
         estimator.fit(training_kernel)
         decisions = estimator.decision_function(test_kernel).reshape(-1)
@@ -120,9 +116,9 @@ def evaluate_quantum_kernel() -> dict[str, Any]:
         return {
             "status": "ready",
             "label": "Experimental small-sample benchmark",
-            "implementation": "Qiskit FidelityQuantumKernel + Aer SamplerV2 + sklearn OneClassSVM (precomputed kernel)",
+            "implementation": "SentinelAI four-qubit RY/RZ fidelity kernel + sklearn OneClassSVM (precomputed kernel)",
             "versions": {"qiskit": version("qiskit"), "qiskitAer": version("qiskit-aer"), "qiskitMachineLearning": version("qiskit-machine-learning"), "scikitLearn": version("scikit-learn")},
-            "configuration": {"randomSeed": config.RANDOM_SEED, "shots": 256, "qubits": 4, "features": list(QUANTUM_FEATURES), "featureMap": "ZZFeatureMap", "repetitions": 2, "entanglement": "linear", "trainingRows": len(quantum_training), "normalTestRows": 8, "anomalyTestRows": 8, "oneClassNu": 0.1},
+            "configuration": {"randomSeed": config.RANDOM_SEED, "shots": 0, "qubits": 4, "features": list(QUANTUM_FEATURES), "featureMap": "SentinelAI RY/RZ feature map", "repetitions": 1, "entanglement": "ring", "trainingRows": len(quantum_training), "normalTestRows": 8, "anomalyTestRows": 8, "oneClassNu": 0.1},
             "metrics": classification_metrics(labels.tolist(), predictions.tolist()),
             "runtimeSeconds": round(perf_counter() - started, 3),
             "assessments": [_assessment_document(item) for item in assessment_rows],
@@ -130,7 +126,7 @@ def evaluate_quantum_kernel() -> dict[str, Any]:
             "limitations": [
                 "This deliberately small synthetic benchmark is not evidence of quantum advantage.",
                 "The quantum kernel and production Isolation Forest use different feature representations; their agreement is descriptive, not a like-for-like model comparison.",
-                "Shot-based kernel estimates vary within the fixed simulator configuration.",
+                "Exact noiseless statevector simulation does not model sampling or hardware noise.",
                 "Quantum score is signed kernel-model novelty, not a probability or final risk value.",
                 "Confidence is intentionally unavailable because this benchmark is not calibrated.",
             ],
