@@ -156,6 +156,8 @@ export const fixtureDataSource: SentinelDataSource = {
   listModels: async () => data.models,
   getModelEvaluation: async () => null,
   getQuantumEvaluation: async () => ({ status: "unavailable", reason: "Evaluation execution requires SENTINEL_DATA_SOURCE=http.", affectsProductionRisk: false }),
+  getQuantumStatus: async () => ({ status: "unavailable", backend: "Live API required", simulation: true, realQuantumHardware: false, qubits: 4, quantumKernelStatus: "unavailable", vqcStatus: "unavailable", affectsProductionRisk: false, reason: "Set SENTINEL_DATA_SOURCE=http to run Qiskit analysis." }),
+  getQuantumEventAnalysis: async () => null,
   getGraphOverview: async (): Promise<GraphOverview> => {
     const employeesCount = data.employees.length;
     const activityCount = data.activity.length;

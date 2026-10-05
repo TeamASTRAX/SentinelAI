@@ -71,6 +71,7 @@ from sentinel_ai.models import evaluate_existing_models, evaluate_quantum_kernel
 from sentinel_ai.mitre import ATTACK_SOURCE_URL, ATTACK_VERSION, catalog
 from sentinel_ai.response.models import ContainmentState, ResponseAction, ResponseAudit
 from sentinel_ai.response.service import ResponseActionFailed
+from sentinel_ai.quantum import QuantumAnalyzer
 
 
 logger = logging.getLogger(__name__)
@@ -444,6 +445,66 @@ def create_app(database_path: str | Path | None = None, bootstrap_demo_data: boo
     def quantum_evaluation() -> dict[str, object]:
         return evaluate_quantum_kernel()
 
+    def quantum_event_document(event_id: str, service: SentinelService) -> dict[str, object]:
+        try:
+            return service.quantum_event_analysis(event_id)
+        except KeyError as error:
+            raise HTTPException(404, {"code": "event_not_found", "message": str(error.args[0])}) from error
+
+    @app.get("/api/quantum/status", response_model=dict[str, object])
+    def quantum_status() -> dict[str, object]:
+        return QuantumAnalyzer.status()
+
+    @app.get("/api/quantum/models", response_model=dict[str, object])
+    def quantum_models() -> dict[str, object]:
+        return QuantumAnalyzer.models()
+
+    @app.get("/api/quantum/events/{event_id}/analysis", response_model=dict[str, object])
+    def quantum_event_analysis(event_id: str, service: Service) -> dict[str, object]:
+        return quantum_event_document(event_id, service)
+
+    @app.get("/api/quantum/events/{event_id}/circuit", response_model=dict[str, object])
+    def quantum_event_circuit(event_id: str, service: Service) -> dict[str, object]:
+        return dict(quantum_event_document(event_id, service)["circuit"])
+
+    @app.get("/api/quantum/events/{event_id}/comparison", response_model=dict[str, object])
+    def quantum_event_comparison(event_id: str, service: Service) -> dict[str, object]:
+        return dict(quantum_event_document(event_id, service)["comparison"])
+
+    @app.get("/api/quantum/events/{event_id}/similarity", response_model=dict[str, object])
+    def quantum_event_similarity(event_id: str, service: Service) -> dict[str, object]:
+        document = dict(quantum_event_document(event_id, service)["threatSimilarity"])
+        document["eventId"] = event_id
+        return document
+@app.get("/api/quantum/optimization/status", response_model=dict[str, object])
+def qaoa_status(service: Service) -> dict[str, object]:
+    """Return status and config for QAOA optimizer (experimental, advisory only)."""
+    return {
+        "experimental": True,
+        "affectsProductionRisk": False,
+        "executesContainment": False,
+        "maxAlerts": config.QAOA_MAX_ALERTS,
+        "depth": config.QAOA_DEPTH,
+        "shots": config.QAOA_SHOTS,
+    }
+
+@app.post("/api/quantum/optimization/prioritize", response_model=dict[str, object])
+def qaoa_prioritize(service: Service) -> dict[str, object]:
+    """Run the read‑only QAOA response prioritization and cache the result."""
+    result = service.qaoa_response_prioritization()
+    # cache result for later retrieval
+    if not hasattr(app.state, "qaoa_latest"):
+        app.state.qaoa_latest = result
+    else:
+        app.state.qaoa_latest = result
+    return result
+
+@app.get("/api/quantum/optimization/latest", response_model=dict[str, object])
+def qaoa_latest(service: Service) -> dict[str, object]:
+    """Return the most recent cached QAOA result, or 404 if not run yet."""
+    if not hasattr(app.state, "qaoa_latest"):
+        raise HTTPException(404, {"code": "no_qaoa_result", "message": "QAOA optimization has not been run yet."})
+    return app.state.qaoa_latest
     @app.get("/api/attack-lab/scenarios", response_model=list[AttackLabScenarioDto])
     def attack_lab_scenarios() -> list[AttackLabScenarioDto]:
         descriptions = {

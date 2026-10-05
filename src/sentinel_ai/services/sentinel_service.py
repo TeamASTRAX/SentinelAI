@@ -31,6 +31,7 @@ from sentinel_ai.response.models import ContainmentState, ResponseAction, Respon
 from sentinel_ai.response.policy import ResponsePolicy
 from sentinel_ai.response.service import ResponseService
 from sentinel_ai.storage import SentinelDatabase
+from sentinel_ai.quantum import QuantumAnalyzer, extract_quantum_features, normalize_quantum_features, run_vqc
 
 
 class SentinelService:
@@ -324,6 +325,89 @@ class SentinelService:
     def event_rows(self) -> list[dict[str, object]]:
         return self.database.list_event_rows()
 
+    def quantum_event_analysis(self, event_id: str) -> dict[str, object]:
+        """Return read-only experimental analysis for one persisted event.
+
+        This method deliberately does not persist anything or call the risk,
+        alert, MITRE, graph, or response services.
+        """
+
+        event = self.database.get_event(event_id)
+        if event is None:
+            raise KeyError(f"Unknown event: {event_id}")
+        profile = self.database.get_profile(event.employee_id)
+        if profile is None:
+            employee = self.database.get_employee(event.employee_id)
+            if employee is None:
+                raise KeyError(f"Unknown employee: {event.employee_id}")
+            profile = build_profiles([employee], [])[employee.employee_id]
+        previous_login = self.database.previous_successful_login(event.employee_id, event.timestamp)
+        features = build_feature_vector(event, profile, previous_login)
+        raw = extract_quantum_features(features)
+        normalized = normalize_quantum_features(raw)
+
+        events = self.database.list_activity_events()
+        profiles = self.database.list_profiles()
+        normal_ids = {
+            item.event_id for item in events
+            if item.scenario == "normal" and not item.is_suspicious
+        }
+        normal_features = self._feature_sequence(events, profiles, normal_ids)
+        normal_rows = [normalize_quantum_features(extract_quantum_features(item)) for item in normal_features]
+
+        detection = next(
+            (row for row in self.detection_rows(event.employee_id) if str(row["event_id"]) == event_id),
+            None,
+        )
+        percentile = float(detection["anomaly_percentile"]) if detection and detection.get("anomaly_percentile") is not None else None
+        classical = {
+            "model": "Isolation Forest",
+            "prediction": "ANOMALOUS" if percentile is not None and percentile >= 95.0 else "NORMAL" if percentile is not None else "UNAVAILABLE",
+            "anomalyScore": round(percentile / 100.0, 6) if percentile is not None else None,
+            "scoreMeaning": "Empirical nonconformity percentile against normal training history; not an attack probability.",
+            "featuresUsed": list(config.FEATURE_ORDER),
+            "featureDimensions": len(config.FEATURE_ORDER),
+            "executionBackend": "scikit-learn CPU",
+            "simulation": False,
+        }
+        circuit = QuantumAnalyzer.circuit(event_id, event.employee_name, raw, normalized)
+        kernel = QuantumAnalyzer.kernel(normalized, normal_rows)
+        vqc = run_vqc(normalized)
+        similarity = QuantumAnalyzer.similarity(normalized)
+        comparison = {
+            "eventId": event_id,
+            "classicalModel": classical,
+            "quantumKernel": {
+                **kernel,
+                "model": "Quantum Fidelity Kernel",
+                "featuresUsed": list(normalized),
+                "simulation": True,
+            },
+            "vqc": {**vqc, "featuresUsed": list(normalized), "featureDimensions": 4, "simulation": True},
+            "disclosure": "Experimental quantum analysis. Quantum outputs do not modify SentinelAI's production risk score. No quantum advantage is claimed.",
+            "affectsProductionRisk": False,
+        }
+        return {
+            "eventId": event_id,
+            "employee": {"employeeId": event.employee_id, "employeeName": event.employee_name, "department": event.department},
+            "occurredAt": event.timestamp.isoformat(),
+            "activityType": event.activity_type,
+            "scenario": event.scenario,
+            "circuit": circuit,
+            "quantumKernel": kernel,
+            "vqc": vqc,
+            "comparison": comparison,
+            "threatSimilarity": similarity,
+            "experimental": True,
+            "affectsProductionRisk": False,
+            "limitations": [
+                "Execution uses a local noiseless simulator, not real quantum hardware.",
+                "The small deterministic VQC training set is representative demo data, not production validation.",
+                "Kernel similarity and VQC model score are not attack probabilities or calibrated confidence.",
+                "No quantum advantage or superiority over the classical model is claimed.",
+            ],
+        }
+
     def detection_rows(self, employee_id: str | None = None) -> list[dict[str, object]]:
         return self.database.list_detection_rows(employee_id)
 
@@ -354,6 +438,16 @@ class SentinelService:
             _, action_recorded = self.response.evaluate_alert(str(row["alert_id"]))
             recorded += int(action_recorded)
         return recorded
+
+    def qaoa_response_prioritization(self) -> dict[str, object]:
+        """Read‑only QAOA‑based response prioritization (experimental advisory only)."""
+        # Gather required data – all read‑only
+        alert_rows = self.alert_rows()
+        detection_rows = {row["alert_id"]: row for row in self.detection_rows()}
+        employee_rows = {emp.employee_id: emp for emp in self.employees()}
+        # Delegate to the optimizer module
+        from sentinel_ai.quantum.qaoa_optimizer import run_optimization_comparison
+        return run_optimization_comparison(alert_rows, detection_rows, employee_rows)
 
     def _mitre_inputs_for_events(self, event_ids: list[str]) -> tuple[list[ActivityEvent], list[dict[str, object]]]:
         selected = set(event_ids)
