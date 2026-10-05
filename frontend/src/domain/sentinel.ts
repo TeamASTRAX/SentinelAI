@@ -680,3 +680,37 @@ export interface MitreOverview {
   recentReports: MitreReport[];
   affectsProductionRisk: boolean;
 }
+
+// Quantum QAOA Optimization types
+export interface QaoaOptimizationStatus {
+  experimental: boolean;
+  affectsProductionRisk: boolean;
+  executesContainment: boolean;
+  maxAlerts: number;
+  depth: number;
+  shots: number;
+}
+
+export interface QaoaExplanation {
+  alertId: string;
+  priorityScore: number;
+  probability?: number;
+  reasoning: string[];
+}
+
+export interface QaoaOptimizationMetadata {
+  alertsConsidered: number;
+  qaoaDepth: number;
+  shots: number;
+  optimizerSuccess: boolean;
+  objectiveValue: number;
+}
+
+export interface QaoaOptimizationResult {
+  experimental: boolean;
+  affectsProductionRisk: boolean;
+  executesContainment: boolean;
+  classicalRanking: QaoaExplanation[];
+  qaoaRanking: QaoaExplanation[];
+  metadata: QaoaOptimizationMetadata;
+}

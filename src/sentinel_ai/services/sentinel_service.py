@@ -443,8 +443,8 @@ class SentinelService:
         """Read‑only QAOA‑based response prioritization (experimental advisory only)."""
         # Gather required data – all read‑only
         alert_rows = self.alert_rows()
-        detection_rows = {row["alert_id"]: row for row in self.detection_rows()}
-        employee_rows = {emp.employee_id: emp for emp in self.employees()}
+        detection_rows = {row["detection_id"]: row for row in self.detection_rows()}
+        employee_rows = {emp.employee_id: emp.model_dump() if hasattr(emp, "model_dump") else vars(emp) for emp in self.employees()}
         # Delegate to the optimizer module
         from sentinel_ai.quantum.qaoa_optimizer import run_optimization_comparison
         return run_optimization_comparison(alert_rows, detection_rows, employee_rows)

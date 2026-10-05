@@ -9,12 +9,16 @@ type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 function scalar(value: string | string[] | undefined) { return Array.isArray(value) ? value[0] : value; }
 function metric(value: number) { return value.toFixed(3); }
 
+import { QaoaSection } from "./qaoa-section";
+
 export default async function QuantumAnalysisPage({ searchParams }: { searchParams: SearchParams }) {
   const data = getSentinelDataSource();
   const params = await searchParams;
-  const [status, events] = await Promise.all([
+  const [status, events, qaoaStatus, qaoaLatest] = await Promise.all([
     data.getQuantumStatus(),
     data.listActivity({ sort: "risk_score", direction: "desc", pageSize: 50 }),
+    data.getQuantumOptimizationStatus(),
+    data.getQuantumOptimizationLatest(),
   ]);
   const selectedEventId = scalar(params.eventId) ?? events.items[0]?.eventId;
   const analysis = selectedEventId && status.status === "ready" ? await data.getQuantumEventAnalysis(selectedEventId) : null;
@@ -61,6 +65,8 @@ export default async function QuantumAnalysisPage({ searchParams }: { searchPara
         <div className="space-y-3"><SectionHeading eyebrow="06 / Similarity" title="Quantum threat similarity" description="Actual fidelity-kernel comparisons against representative encoded profiles" /><div className="panel divide-y divide-border">{analysis.threatSimilarity.items.map((item) => <div key={item.profile} className="grid grid-cols-[minmax(0,1fr)_120px_52px] items-center gap-3 px-4 py-3"><span className="text-[11px] font-medium">{item.profile}</span><span className="h-1.5 overflow-hidden rounded-full bg-[#edf1f6]"><span className="block h-full rounded-full bg-[var(--accent)]" style={{ width: `${item.similarity * 100}%` }} /></span><span className="text-right font-mono text-[11px]">{metric(item.similarity)}</span></div>)}</div><p className="text-[10px] text-[var(--text-muted)]">{analysis.threatSimilarity.scoreMeaning}</p></div>
         <div className="space-y-3"><SectionHeading eyebrow="07 / Guardrails" title="Experimental limitations" /><div className="panel p-5"><ul className="space-y-3 text-[10px] leading-5 text-[var(--text-muted)]">{analysis.limitations.map((item) => <li key={item} className="flex gap-2"><span className="text-[var(--medium)]">—</span><span>{item}</span></li>)}</ul></div></div>
       </section>
+
+      <QaoaSection initialStatus={qaoaStatus} initialLatest={qaoaLatest} />
     </>}
   </div>;
 }

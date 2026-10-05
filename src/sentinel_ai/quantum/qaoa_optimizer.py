@@ -107,8 +107,9 @@ def build_factors(
     factors: List[AlertFactor] = []
     for alert in alert_rows:
         aid = alert["alert_id"]
-        detection = detection_rows.get(aid, {})
-        employee = employee_rows.get(alert["employee_id"], {})
+        did = alert.get("detection_id")
+        detection = detection_rows.get(did, {})
+        employee = employee_rows.get(alert.get("employee_id"), {})
         # Normalised risk score (0‑1)
         risk_norm = _normalise(float(alert["risk_score"]), min_risk, max_risk)
         # Severity based on stored risk_level
@@ -236,7 +237,7 @@ def _objective(params: Sequence[float], Q: np.ndarray):
     betas = params[:p]
     gammas = params[p:]
     n = Q.shape[0]
-    qc = QuantumCircuit(n, n)
+    qc = QuantumCircuit(n)
     for q in range(n):
         qc.h(q)
     for layer in range(p):
@@ -248,7 +249,8 @@ def _objective(params: Sequence[float], Q: np.ndarray):
     counts = result.get_counts()
     exp_val = 0.0
     for bitstring, cnt in counts.items():
-        x = np.array([int(b) for b in reversed(bitstring)])
+        clean_bits = bitstring.replace(" ", "")
+        x = np.array([int(b) for b in reversed(clean_bits)])
         val = x @ Q @ x
         exp_val += val * (cnt / QAOA_SHOTS)
     return exp_val
@@ -262,7 +264,7 @@ def run_qaoa(factors: List[AlertFactor]):
     - ``metadata`` – execution time, depth, shots, etc.
     """
     if not factors:
-        return {"ranked_alerts": [], "probabilities": {}, "metadata": {}}
+        return {"rankedAlerts": [], "probabilities": {}, "metadata": {"alertsConsidered": 0}}
     Q, meta = build_qubo(factors)
     init_params = np.zeros(2 * QAOA_DEPTH)
     res = minimize(
@@ -274,7 +276,7 @@ def run_qaoa(factors: List[AlertFactor]):
     )
     opt_params = res.x
     n = Q.shape[0]
-    qc = QuantumCircuit(n, n)
+    qc = QuantumCircuit(n)
     for q in range(n):
         qc.h(q)
     for layer in range(QAOA_DEPTH):
@@ -286,20 +288,22 @@ def run_qaoa(factors: List[AlertFactor]):
     counts = result.get_counts()
     probs = {f.alert_id: 0.0 for f in factors}
     for bitstring, cnt in counts.items():
-        bits = list(reversed(bitstring))
+        clean_bits = bitstring.replace(" ", "")
+        bits = list(reversed(clean_bits))
         for idx, b in enumerate(bits):
             if b == "1":
                 probs[factors[idx].alert_id] += cnt / QAOA_SHOTS
     ranked = sorted(probs.items(), key=lambda kv: kv[1], reverse=True)
     ranked_alerts = [aid for aid, _ in ranked]
     return {
-        "ranked_alerts": ranked_alerts,
+        "rankedAlerts": ranked_alerts,
         "probabilities": probs,
         "metadata": {
-            "qaoa_depth": QAOA_DEPTH,
+            "alertsConsidered": len(factors),
+            "qaoaDepth": QAOA_DEPTH,
             "shots": QAOA_SHOTS,
-            "optimizer_success": bool(res.success),
-            "objective_value": float(res.fun),
+            "optimizerSuccess": bool(res.success),
+            "objectiveValue": float(res.fun),
         },
     }
 
@@ -351,7 +355,7 @@ def run_optimization_comparison(
             "probability": qaoa["probabilities"][aid],
             "reasoning": _explain(aid),
         }
-        for aid in qaoa["ranked_alerts"]
+        for aid in qaoa["rankedAlerts"]
     ]
     return {
         "experimental": True,

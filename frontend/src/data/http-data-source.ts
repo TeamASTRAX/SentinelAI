@@ -1,5 +1,5 @@
 import "server-only";
-import type { ActivityFilters, ActivityRecord, AttackLabRun, AttackLabScenario, CreateAttackLabRun, ModelEvaluationReport, ModelMetadata, OperationsOverview, PageResult, QuantumEvaluationReport, QuantumStatus, QuantumEventAnalysis, SystemCounts, SystemStatusSnapshot, ThreatFilters, ThreatSummary, UserDetail, UserFilters, UserSummary, GraphOverview, GraphEntityDetail, GraphEventContext, GraphAttackRunContext, GraphFinding, GraphData, GraphFilters, MitreCatalog, MitreOverview, MitreReport, ContainmentState, ResponseHistory } from "@/domain/sentinel";
+import type { ActivityFilters, ActivityRecord, AttackLabRun, AttackLabScenario, CreateAttackLabRun, ModelEvaluationReport, ModelMetadata, OperationsOverview, PageResult, QuantumEvaluationReport, QuantumStatus, QuantumEventAnalysis, SystemCounts, SystemStatusSnapshot, ThreatFilters, ThreatSummary, UserDetail, UserFilters, UserSummary, GraphOverview, GraphEntityDetail, GraphEventContext, GraphAttackRunContext, GraphFinding, GraphData, GraphFilters, MitreCatalog, MitreOverview, MitreReport, ContainmentState, ResponseHistory, QaoaOptimizationStatus, QaoaOptimizationResult } from "@/domain/sentinel";
 
 import type { SentinelDataSource } from "@/data/sentinel-data-source";
 
@@ -171,5 +171,22 @@ export class HttpDataSource implements SentinelDataSource {
   }
   getResponseHistory(employeeId: string) {
     return this.get<ResponseHistory>(`/api/response/users/${encodeURIComponent(employeeId)}/history`);
+  }
+
+  getQuantumOptimizationStatus() {
+    return this.get<QaoaOptimizationStatus>("/api/quantum/optimization/status");
+  }
+
+  runQuantumOptimization() {
+    return this.post<QaoaOptimizationResult>("/api/quantum/optimization/prioritize", {});
+  }
+
+  async getQuantumOptimizationLatest() {
+    try {
+      return await this.get<QaoaOptimizationResult>("/api/quantum/optimization/latest");
+    } catch (error) {
+      if (error instanceof SentinelApiError && error.status === 404) return null;
+      throw error;
+    }
   }
 }

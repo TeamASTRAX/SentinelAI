@@ -161,3 +161,12 @@ In another terminal, start the frontend in live API mode:
 cd frontend
 SENTINEL_DATA_SOURCE=http SENTINEL_API_BASE_URL=http://127.0.0.1:8000 npm run dev
 ```
+
+### Quantum Response Optimization
+
+SentinelAI also provides an experimental **QAOA (Quantum Approximate Optimization Algorithm)** component to advise on response prioritization when multiple alerts are active.
+
+- **QUBO Formulation**: Maps alert severity, risk, business impact, and urgency into a Quadratic Unconstrained Binary Optimization problem.
+- **QAOA Circuit**: Implements a depth-1 (or configurable depth) QAOA circuit to optimize the QUBO cost function.
+- **Advisory Only**: The optimization is purely advisory (`affectsProductionRisk: false`). It provides a ranked list of alerts and execution probabilities but does not execute automated containment or modify risk scores.
+- **Explainable Ranking**: The UI compares the classical deterministic ranking with the QAOA probabilistic ranking, providing contribution factor reasoning for every alert.

@@ -30,6 +30,8 @@ import type {
   ResponseHistory,
   QuantumStatus,
   QuantumEventAnalysis,
+  QaoaOptimizationStatus,
+  QaoaOptimizationResult,
 } from "@/domain/sentinel";
 
 export interface SentinelDataSource {
@@ -63,4 +65,7 @@ export interface SentinelDataSource {
   getMitreAlert(alertId: string): Promise<MitreReport | null>;
   getContainmentState(employeeId: string): Promise<ContainmentState | null>;
   getResponseHistory(employeeId: string): Promise<ResponseHistory>;
+  getQuantumOptimizationStatus(): Promise<QaoaOptimizationStatus>;
+  runQuantumOptimization(): Promise<QaoaOptimizationResult>;
+  getQuantumOptimizationLatest(): Promise<QaoaOptimizationResult | null>;
 }

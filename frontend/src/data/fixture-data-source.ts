@@ -264,4 +264,17 @@ export const fixtureDataSource: SentinelDataSource = {
     };
   },
   getResponseHistory: async (): Promise<ResponseHistory> => ({ items: [] }),
+
+  getQuantumOptimizationStatus: async () => ({
+    experimental: true,
+    affectsProductionRisk: false,
+    executesContainment: false,
+    maxAlerts: 8,
+    depth: 2,
+    shots: 1024,
+  }),
+  runQuantumOptimization: async () => {
+    throw new Error("Cannot run optimization in fixture mode.");
+  },
+  getQuantumOptimizationLatest: async () => null,
 };

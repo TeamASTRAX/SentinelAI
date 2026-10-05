@@ -476,35 +476,35 @@ def create_app(database_path: str | Path | None = None, bootstrap_demo_data: boo
         document = dict(quantum_event_document(event_id, service)["threatSimilarity"])
         document["eventId"] = event_id
         return document
-@app.get("/api/quantum/optimization/status", response_model=dict[str, object])
-def qaoa_status(service: Service) -> dict[str, object]:
-    """Return status and config for QAOA optimizer (experimental, advisory only)."""
-    return {
-        "experimental": True,
-        "affectsProductionRisk": False,
-        "executesContainment": False,
-        "maxAlerts": config.QAOA_MAX_ALERTS,
-        "depth": config.QAOA_DEPTH,
-        "shots": config.QAOA_SHOTS,
-    }
+    @app.get("/api/quantum/optimization/status", response_model=dict[str, object])
+    def qaoa_status(service: Service) -> dict[str, object]:
+        """Return status and config for QAOA optimizer (experimental, advisory only)."""
+        return {
+            "experimental": True,
+            "affectsProductionRisk": False,
+            "executesContainment": False,
+            "maxAlerts": config.QAOA_MAX_ALERTS,
+            "depth": config.QAOA_DEPTH,
+            "shots": config.QAOA_SHOTS,
+        }
 
-@app.post("/api/quantum/optimization/prioritize", response_model=dict[str, object])
-def qaoa_prioritize(service: Service) -> dict[str, object]:
-    """Run the read‑only QAOA response prioritization and cache the result."""
-    result = service.qaoa_response_prioritization()
-    # cache result for later retrieval
-    if not hasattr(app.state, "qaoa_latest"):
-        app.state.qaoa_latest = result
-    else:
-        app.state.qaoa_latest = result
-    return result
+    @app.post("/api/quantum/optimization/prioritize", response_model=dict[str, object])
+    def qaoa_prioritize(service: Service) -> dict[str, object]:
+        """Run the read‑only QAOA response prioritization and cache the result."""
+        result = service.qaoa_response_prioritization()
+        # cache result for later retrieval
+        if not hasattr(app.state, "qaoa_latest"):
+            app.state.qaoa_latest = result
+        else:
+            app.state.qaoa_latest = result
+        return result
 
-@app.get("/api/quantum/optimization/latest", response_model=dict[str, object])
-def qaoa_latest(service: Service) -> dict[str, object]:
-    """Return the most recent cached QAOA result, or 404 if not run yet."""
-    if not hasattr(app.state, "qaoa_latest"):
-        raise HTTPException(404, {"code": "no_qaoa_result", "message": "QAOA optimization has not been run yet."})
-    return app.state.qaoa_latest
+    @app.get("/api/quantum/optimization/latest", response_model=dict[str, object])
+    def qaoa_latest(service: Service) -> dict[str, object]:
+        """Return the most recent cached QAOA result, or 404 if not run yet."""
+        if not hasattr(app.state, "qaoa_latest"):
+            raise HTTPException(404, {"code": "no_qaoa_result", "message": "QAOA optimization has not been run yet."})
+        return app.state.qaoa_latest
     @app.get("/api/attack-lab/scenarios", response_model=list[AttackLabScenarioDto])
     def attack_lab_scenarios() -> list[AttackLabScenarioDto]:
         descriptions = {
