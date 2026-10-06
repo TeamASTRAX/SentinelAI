@@ -33,7 +33,7 @@
   color-scheme: light;
   --font-geist-sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --font-geist-mono: "Cascadia Code", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
-  --background: #f5f7fb;
+  --background: #f7f9fc;
   --surface: #ffffff;
   --surface-elevated: #f8fafc;
   --surface-hover: #f3f7fd;
@@ -46,18 +46,22 @@
   --accent: #2563eb;
   --accent-dim: #e8f0ff;
   --accent-strong: #1d4ed8;
+  --quantum: #6d4aff;
+  --quantum-strong: #5936df;
+  --quantum-soft: #f1edff;
+  --quantum-border: #ddd4ff;
   --focus: #3b82f6;
   --low: #1f9d68;
   --medium: #d99a16;
   --high: #ea6b22;
   --critical: #dc3545;
-  --radius: 12px;
+  --radius: 16px;
 }
 
 @layer base {
   * { @apply border-border outline-ring/50; }
   html { @apply bg-background font-sans; }
-  body { @apply min-h-screen bg-background text-foreground antialiased; font-size: 13px; }
+  body { @apply min-h-screen bg-background text-foreground antialiased; font-size: 13px; background-image: radial-gradient(circle at 78% -10%, rgb(109 74 255 / 0.055), transparent 26rem); }
   :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
   ::selection { background: var(--accent-dim); color: var(--foreground); }
 }
@@ -70,7 +74,7 @@
     letter-spacing: 0.12em;
     text-transform: uppercase;
   }
-  .panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: 0 1px 2px rgb(15 35 59 / 0.035); }
+  .panel { background: color-mix(in srgb, var(--surface), transparent 2%); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: 0 2px 8px rgb(15 35 59 / 0.035), 0 1px 2px rgb(15 35 59 / 0.025); }
   .interactive-panel { transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease; }
   .interactive-panel:hover { transform: translateY(-2px); border-color: var(--border-strong); box-shadow: 0 10px 24px rgb(37 99 235 / 0.08); }
   .control {
@@ -85,10 +89,21 @@
   .control:focus-visible { border-color: var(--focus); outline: 2px solid color-mix(in srgb, var(--focus), transparent 55%); outline-offset: 1px; }
   .tabular { font-variant-numeric: tabular-nums; }
   .scrollbar-thin { scrollbar-color: var(--border-strong) transparent; scrollbar-width: thin; }
+  .page-enter { animation: page-enter 260ms cubic-bezier(.22,.8,.24,1) both; }
+  .quantum-panel { border-color: var(--quantum-border); box-shadow: 0 12px 35px rgb(89 54 223 / 0.075); }
+  .quantum-text { color: var(--quantum-strong); }
+  .soft-grid { background-image: linear-gradient(var(--border) 1px, transparent 1px), linear-gradient(90deg, var(--border) 1px, transparent 1px); background-size: 24px 24px; }
 }
 
 @keyframes skeleton-pulse { 50% { opacity: .55; } }
+@keyframes page-enter { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes gate-reveal { from { opacity: 0; transform: scale(.82); } to { opacity: 1; transform: scale(1); } }
+@keyframes progress-reveal { from { width: 0; } }
+@keyframes quantum-pulse { 50% { box-shadow: 0 0 0 6px rgb(109 74 255 / 0.08); } }
 .skeleton-block { animation: skeleton-pulse 1.6s ease-in-out infinite; background: #e9eef5; border-radius: 8px; }
+.gate-reveal { animation: gate-reveal 260ms cubic-bezier(.2,.8,.2,1) both; }
+.progress-reveal { animation: progress-reveal 720ms cubic-bezier(.2,.8,.2,1) both; }
+.quantum-pulse { animation: quantum-pulse 2.8s ease-in-out infinite; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {

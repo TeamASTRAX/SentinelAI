@@ -206,11 +206,20 @@ export function GraphVisualization({
       }
     });
 
-    const observer = new ResizeObserver(() => chart.resize());
+    let resizeFrame = 0;
+    const observer = new ResizeObserver(() => {
+      cancelAnimationFrame(resizeFrame);
+      resizeFrame = requestAnimationFrame(() => {
+        if (!chart.isDisposed() && host.current?.isConnected && host.current.clientWidth > 0 && host.current.clientHeight > 0) {
+          chart.resize({ animation: { duration: 0 } });
+        }
+      });
+    });
     observer.observe(host.current);
 
     return () => {
       observer.disconnect();
+      cancelAnimationFrame(resizeFrame);
       chart.dispose();
       chartInstance.current = null;
       if (chartRef) chartRef.current = null;
@@ -218,7 +227,7 @@ export function GraphVisualization({
   }, [option, onSelectNode, chartRef]);
 
   return (
-    <div className="relative w-full h-[620px] bg-gradient-to-b from-white to-[var(--surface-hover)] border border-[var(--border)] rounded-lg overflow-hidden shadow-xs">
+    <div className="relative h-[620px] w-full overflow-hidden rounded-xl border border-[var(--border)] bg-[#fbfcfe] shadow-xs">
       {/* Canvas */}
       <div ref={host} role="img" aria-label="Entity Relationship Security Graph" className="w-full h-full" />
 

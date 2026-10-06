@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Activity, ArrowRight, BrainCircuit, CircleAlert, Database, Info, ShieldCheck, Siren, Sparkles, TrendingUp, UsersRound } from "lucide-react";
 import { AverageRiskChart, DepartmentRiskChart, DetectionContributionChart, RiskDistributionChart, ThreatTrendChart, ThreatTypesChart } from "@/components/overview/overview-charts";
 import { getSentinelDataSource } from "@/data/data-source";
+import { AnimatedNumber } from "@/components/system/animated-number";
 import type { EmployeeAttention, NamedMetric, RiskLevel, ThreatSummary, ThreatTrendPoint, UserSummary } from "@/domain/sentinel";
 
 const riskColor: Record<RiskLevel, string> = { Low: "var(--low)", Medium: "var(--medium)", High: "var(--high)", Critical: "var(--critical)" };
@@ -38,9 +39,9 @@ function fallbackThreatTrend(threats: ThreatSummary[]): ThreatTrendPoint[] {
   return [...daily.values()].sort((a, b) => a.date.localeCompare(b.date));
 }
 
-function MetricCard({ icon: Icon, label, value, description, tone = "blue" }: { icon: typeof Activity; label: string; value: string; description: string; tone?: "blue" | "orange" | "red" | "green" }) {
+function MetricCard({ icon: Icon, label, value, decimals = 0, description, tone = "blue" }: { icon: typeof Activity; label: string; value: number; decimals?: number; description: string; tone?: "blue" | "orange" | "red" | "green" }) {
   const tones = { blue: "bg-[#eaf2ff] text-[#2563eb]", orange: "bg-[#fff3e9] text-[#ea6b22]", red: "bg-[#fff0f1] text-[#dc3545]", green: "bg-[#eaf8f1] text-[#1f9d68]" };
-  return <article className="panel interactive-panel min-w-0 p-4"><div className="flex items-start justify-between gap-3"><div><p className="text-[11px] font-semibold text-[var(--text-secondary)]">{label}</p><p className="mt-2 text-[25px] font-bold tracking-[-0.035em] tabular">{value}</p></div><span className={`grid size-9 shrink-0 place-items-center rounded-xl ${tones[tone]}`}><Icon className="size-4" /></span></div><p className="mt-3 text-[9px] leading-4 text-[var(--text-muted)]">{description}</p></article>;
+  return <article className="panel interactive-panel min-w-0 p-4"><div className="flex items-start justify-between gap-3"><div><p className="text-[11px] font-semibold text-[var(--text-secondary)]">{label}</p><p className="mt-2 text-[25px] font-bold tracking-[-0.035em] tabular"><AnimatedNumber value={value} decimals={decimals} /></p></div><span className={`grid size-9 shrink-0 place-items-center rounded-xl ${tones[tone]}`}><Icon className="size-4" /></span></div><p className="mt-3 text-[9px] leading-4 text-[var(--text-muted)]">{description}</p></article>;
 }
 
 function CardHeader({ title, description, info }: { title: string; description: string; info?: string }) {
@@ -65,7 +66,7 @@ export default async function OverviewPage() {
 
   return <div className="mx-auto max-w-[1560px] space-y-5">
     <section className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
-      <div><p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--accent)]">SentinelAI Command Centre</p><h1 className="mt-2 text-[28px] font-bold tracking-[-0.035em]">Security Overview</h1><p className="mt-2 max-w-2xl text-[12px] text-[var(--text-secondary)]">Behavioural intelligence and threat activity across the monitored environment.</p></div>
+      <div><p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--accent)]">Quantum Glass Command Center</p><h1 className="mt-2 text-[30px] font-bold tracking-[-0.045em]">SentinelAI <span className="quantum-text">Q</span></h1><p className="mt-1 text-[13px] font-semibold text-[var(--text-secondary)]">Hybrid Quantum-Classical Threat Intelligence</p><p className="mt-2 max-w-2xl text-[11px] leading-5 text-[var(--text-muted)]">Explainable insider-threat detection, experimental quantum analysis, threat intelligence, and response orchestration.</p></div>
       <div className="flex flex-wrap gap-2" aria-label="Live system status">
         <span className="inline-flex items-center gap-2 rounded-full border border-[#dce9e3] bg-white px-3 py-2 text-[10px] font-semibold"><Database className="size-3.5 text-[var(--low)]" />Database Connected</span>
         <span className="inline-flex items-center gap-2 rounded-full border border-[#dfe7f6] bg-white px-3 py-2 text-[10px] font-semibold"><BrainCircuit className="size-3.5 text-[var(--accent)]" />AI Model {system.model.status === "ready" ? "Ready" : titleCase(system.model.status)}</span>
@@ -74,11 +75,11 @@ export default async function OverviewPage() {
     </section>
 
     <section aria-label="Security key metrics" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-      <MetricCard icon={Activity} label="Total Events" value={total.toLocaleString()} description="Events analysed by SentinelAI" />
-      <MetricCard icon={CircleAlert} label="Active Alerts" value={activeAlerts.toLocaleString()} description="Require investigation" tone="orange" />
-      <MetricCard icon={TrendingUp} label="High-Risk Events" value={highRisk.toLocaleString()} description="High and Critical anomalies" tone="orange" />
-      <MetricCard icon={Siren} label="Critical Threats" value={critical.toLocaleString()} description="Immediate attention required" tone="red" />
-      <MetricCard icon={Sparkles} label="Average Risk Score" value={averageRisk.toFixed(1)} description="Across analysed activity" tone="green" />
+      <MetricCard icon={Activity} label="Total Events" value={total} description="Events analysed by SentinelAI" />
+      <MetricCard icon={CircleAlert} label="Active Alerts" value={activeAlerts} description="Require investigation" tone="orange" />
+      <MetricCard icon={TrendingUp} label="High-Risk Events" value={highRisk} description="High and Critical anomalies" tone="orange" />
+      <MetricCard icon={Siren} label="Critical Threats" value={critical} description="Immediate attention required" tone="red" />
+      <MetricCard icon={Sparkles} label="Average Risk Score" value={averageRisk} decimals={1} description="Across analysed activity" tone="green" />
     </section>
 
     <section className="grid gap-4 xl:grid-cols-[minmax(0,1.7fr)_minmax(280px,.75fr)]">

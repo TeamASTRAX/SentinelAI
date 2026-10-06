@@ -4,8 +4,8 @@ import { getSentinelDataSource } from "@/data/data-source";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: { default: "SentinelAI Operations", template: "%s · SentinelAI" },
-  description: "Behavioral threat operations console",
+  title: { default: "SentinelAI Q", template: "%s · SentinelAI Q" },
+  description: "Hybrid quantum-classical threat intelligence",
 };
 export const dynamic = "force-dynamic";
 
@@ -13,7 +13,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
   const system = await getSentinelDataSource().getSystemStatus();
   return (
     <html lang="en">
-      <body><AppShell system={system}>{children}</AppShell></body>
+      <body><AppShell system={system}><div className="page-enter">{children}</div></AppShell></body>
     </html>
   );
 }

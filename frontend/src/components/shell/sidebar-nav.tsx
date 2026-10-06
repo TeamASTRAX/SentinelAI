@@ -9,14 +9,14 @@ import { cn } from "@/lib/utils";
 
 const primary = [
   { href: "/", label: "Overview", icon: LayoutDashboard },
-  { href: "/activity", label: "Activity Monitor", icon: Activity },
-  { href: "/users", label: "User Behaviour", icon: UserRoundSearch },
-  { href: "/attack-lab", label: "Threat Simulation", icon: FlaskConical },
-  { href: "/threats", label: "Alert Investigation", icon: ShieldAlert },
-  { href: "/threat-intelligence", label: "Threat Intelligence", icon: Crosshair },
-  { href: "/models", label: "Models", icon: BrainCircuit },
-  { href: "/quantum", label: "Quantum Analysis", icon: Atom },
+  { href: "/activity", label: "Activity", icon: Activity },
+  { href: "/threats", label: "Threats & Alerts", icon: ShieldAlert },
   { href: "/graph", label: "Graph Analysis", icon: Share2 },
+  { href: "/threat-intelligence", label: "Threat Intelligence", icon: Crosshair },
+  { href: "/quantum", label: "Quantum Analysis", icon: Atom },
+  { href: "/attack-lab", label: "Attack Lab", icon: FlaskConical },
+  { href: "/users", label: "User Behaviour", icon: UserRoundSearch },
+  { href: "/models", label: "Detection Models", icon: BrainCircuit },
 ];
 const plannedIcons: Record<PlannedModuleSlug, LucideIcon> = {
 };
@@ -32,9 +32,9 @@ export function SidebarNav({ compact = false }: { compact?: boolean }) {
           <Link key={href} href={href} aria-current={active ? "page" : undefined} className={cn(
             "flex items-center gap-3 border-transparent text-[12px] font-medium transition-colors focus-visible:z-10",
             compact ? "border-b-2 px-3" : "h-10 rounded-lg border-l-2 px-3",
-            active ? "border-[var(--accent)] bg-[var(--surface-selected)] font-semibold text-foreground" : "text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] hover:text-foreground",
+            active ? (href === "/quantum" ? "border-[var(--quantum)] bg-[var(--quantum-soft)] font-semibold text-[var(--quantum-strong)]" : "border-[var(--accent)] bg-[var(--surface-selected)] font-semibold text-foreground") : (href === "/quantum" ? "text-[var(--quantum-strong)] hover:bg-[var(--quantum-soft)]" : "text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] hover:text-foreground"),
           )}>
-            <Icon aria-hidden="true" className={cn("size-4", active && "text-[var(--accent)]")} />
+            <Icon aria-hidden="true" className={cn("size-4", active && (href === "/quantum" ? "text-[var(--quantum)]" : "text-[var(--accent)]"))} />
             <span>{label}</span>
           </Link>
         );

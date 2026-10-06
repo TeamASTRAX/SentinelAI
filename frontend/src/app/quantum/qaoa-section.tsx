@@ -1,151 +1,50 @@
 "use client";
 
-import { useState } from "react";
-import { Atom, Cpu, ShieldOff, Play } from "lucide-react";
+import { useState, useTransition } from "react";
+import { Atom, ChevronDown, Cpu, Gauge, Play, ShieldCheck, ShieldOff, Sparkles, Target } from "lucide-react";
 import { SectionHeading } from "@/components/system/section-heading";
-import type { QaoaOptimizationStatus, QaoaOptimizationResult } from "@/domain/sentinel";
+import type { QaoaExplanation, QaoaOptimizationStatus, QaoaOptimizationResult } from "@/domain/sentinel";
+import { runQaoaOptimization } from "./actions";
 
 function metric(value: number) { return value.toFixed(3); }
 
-export function QaoaSection({ 
-  initialStatus,
-  initialLatest
-}: { 
-  initialStatus: QaoaOptimizationStatus;
-  initialLatest: QaoaOptimizationResult | null;
-}) {
-  const [loading, setLoading] = useState(false);
+function Ranking({ title, items, quantum = false }: { title: string; items: QaoaExplanation[]; quantum?: boolean }) {
+  return <article className={`panel overflow-hidden ${quantum ? "quantum-panel" : ""}`}>
+    <div className={`flex items-center justify-between border-b px-4 py-3 ${quantum ? "border-[var(--quantum-border)] bg-[var(--quantum-soft)] text-[var(--quantum-strong)]" : "border-border bg-[var(--surface-elevated)]"}`}><span className="tech-label text-inherit">{title}</span><span className="font-mono text-[9px]">{items.length} ALERTS</span></div>
+    <div className="divide-y divide-border">{items.map((item, index) => <div key={item.alertId} className={`p-4 transition-colors ${index === 0 ? (quantum ? "bg-[#fbfaff]" : "bg-[#f8fbff]") : "hover:bg-[var(--surface-hover)]"}`}>
+      <div className="flex items-center gap-3"><span className={`grid size-8 shrink-0 place-items-center rounded-xl font-mono text-[11px] font-bold ${index === 0 ? (quantum ? "bg-[var(--quantum)] text-white" : "bg-[var(--accent)] text-white") : "bg-[var(--surface-elevated)] text-[var(--text-secondary)]"}`}>#{index + 1}</span><div className="min-w-0 flex-1"><div className="truncate font-mono text-[11px] font-bold">{item.alertId}</div><div className="mt-0.5 text-[8px] uppercase tracking-wider text-[var(--text-muted)]">{index === 0 ? "Top recommendation" : "Advisory priority"}</div></div><div className="text-right"><div className="font-mono text-[12px] font-bold">{metric(quantum ? item.probability ?? 0 : item.priorityScore)}</div><div className="text-[8px] uppercase text-[var(--text-muted)]">{quantum ? "selection rate" : "priority score"}</div></div></div>
+      <details className="group mt-3 rounded-lg border border-border bg-white px-3 py-2"><summary className="flex cursor-pointer list-none items-center justify-between text-[9px] font-bold text-[var(--text-secondary)]">Why this priority?<ChevronDown className="size-3 transition-transform group-open:rotate-180" /></summary><ul className="mt-2 space-y-1.5 border-t border-border pt-2 text-[9px] leading-4 text-[var(--text-muted)]">{item.reasoning.map((reason) => <li key={reason}>• {reason}</li>)}</ul></details>
+    </div>)}</div>
+  </article>;
+}
+
+export function QaoaSection({ initialStatus, initialLatest }: { initialStatus: QaoaOptimizationStatus; initialLatest: QaoaOptimizationResult | null }) {
+  const [isPending, startTransition] = useTransition();
   const [result, setResult] = useState<QaoaOptimizationResult | null>(initialLatest);
   const [error, setError] = useState<string | null>(null);
 
-  async function runOptimization() {
-    setLoading(true);
+  function runOptimization() {
     setError(null);
-    try {
-      const res = await fetch("/api/quantum/optimization/prioritize", { method: "POST" });
-      if (!res.ok) throw new Error("Optimization failed");
-      const data = await res.json();
-      setResult(data);
-    } catch (e: unknown) {
-      if (e instanceof Error) {
-        setError(e.message || "An error occurred");
-      } else {
-        setError("An error occurred");
-      }
-    } finally {
-      setLoading(false);
-    }
+    startTransition(async () => {
+      const response = await runQaoaOptimization();
+      if (response.ok) setResult(response.result);
+      else setError(response.error);
+    });
   }
 
-  return (
-    <div className="space-y-6 pt-10 border-t border-border mt-10">
-      <section className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
-        <div>
-          <div className="tech-label">Quantum Response Optimization</div>
-          <h2 className="mt-2 text-[22px] font-bold tracking-[-0.035em]">QAOA Prioritization</h2>
-          <p className="mt-1 max-w-[760px] text-[12px] text-[var(--text-secondary)]">
-            Experimental QUBO formulation mapped to a Quantum Approximate Optimization Algorithm.
-          </p>
-        </div>
-        <div className="rounded-lg border border-[var(--medium)]/30 bg-[#fffaf0] px-4 py-3 text-[10px] leading-5 text-[#8b6210]">
-          <strong className="block text-[9px] tracking-[0.12em]">EXPERIMENTAL · ADVISORY ONLY</strong>
-          QAOA does not modify production risk or execute containment. No quantum advantage is claimed.
-        </div>
-      </section>
+  return <div className="mt-10 space-y-6 border-t border-border pt-10">
+    <section className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between"><div><div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[.13em] text-[var(--quantum-strong)]"><Sparkles className="size-3.5" />Quantum Response Optimization</div><h2 className="mt-2 text-[24px] font-bold tracking-[-0.04em]">QAOA Priority Lab</h2><p className="mt-1 max-w-[760px] text-[11px] leading-5 text-[var(--text-secondary)]">Compare deterministic classical priority with the experimental QAOA ordering for the same active alerts.</p></div><div className="flex flex-wrap gap-2 text-[9px] font-bold"><span className="rounded-full border border-[var(--low)]/25 bg-[#effaf4] px-3 py-1.5 text-[var(--low)]"><ShieldCheck className="mr-1 inline size-3" />ADVISORY ONLY</span><span className="rounded-full border border-border bg-white px-3 py-1.5 text-[var(--text-secondary)]">affectsProductionRisk = false</span><span className="rounded-full border border-border bg-white px-3 py-1.5 text-[var(--text-secondary)]">executesContainment = false</span></div></section>
 
-      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        {[
-          [Atom, "Max alerts", initialStatus.maxAlerts],
-          [Cpu, "QAOA Depth", initialStatus.depth],
-          [Cpu, "Shots", initialStatus.shots],
-          [ShieldOff, "Production risk", initialStatus.affectsProductionRisk ? "Enabled" : "Disabled"],
-        ].map(([Icon, label, value]) => (
-          <article key={String(label)} className="panel p-4">
-            <div className="flex items-center gap-2 text-[var(--accent)]">
-              {/* @ts-expect-error dynamic component type */}
-              <Icon className="size-4" />
-              <span className="tech-label">{String(label)}</span>
-            </div>
-            <div className="mt-3 text-[12px] font-semibold leading-5">{String(value)}</div>
-          </article>
-        ))}
-      </section>
+    <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">{[
+      { icon: Target, label: "Maximum alerts", value: initialStatus.maxAlerts }, { icon: Atom, label: "QAOA depth", value: initialStatus.depth }, { icon: Cpu, label: "Circuit shots", value: initialStatus.shots }, { icon: ShieldOff, label: "Production risk", value: initialStatus.affectsProductionRisk ? "Enabled" : "Disabled" },
+    ].map(({ icon: Icon, label, value }) => <article key={label} className="panel interactive-panel p-4"><div className="flex items-center gap-2 text-[var(--quantum)]"><Icon className="size-4" /><span className="tech-label">{label}</span></div><div className={`mt-3 text-[15px] font-bold ${label === "Production risk" ? "text-[var(--low)]" : ""}`}>{value}</div></article>)}</section>
 
-      <section className="panel p-4 flex flex-col sm:flex-row justify-between items-center gap-4">
-        <div className="text-[12px] text-[var(--text-secondary)]">
-          Ready to run QAOA optimization against active alerts.
-        </div>
-        <button 
-          onClick={runOptimization} 
-          disabled={loading}
-          className="control bg-[var(--accent)] px-5 font-semibold text-white hover:bg-[var(--accent-strong)] flex items-center gap-2 disabled:opacity-50"
-        >
-          {loading ? "Running Optimization..." : <><Play className="size-3" /> Run Quantum Optimization</>}
-        </button>
-      </section>
+    <section className="panel quantum-panel flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between"><div className="flex items-start gap-3"><span className="grid size-9 shrink-0 place-items-center rounded-xl bg-[var(--quantum-soft)] text-[var(--quantum)]"><Gauge className="size-4" /></span><div className="text-[11px] font-semibold">Ready to analyze active alerts<p className="mt-1 text-[9px] font-normal text-[var(--text-muted)]">Results are read-only, experimental, and never execute containment.</p></div></div><button onClick={runOptimization} disabled={isPending} className="control inline-flex items-center justify-center gap-2 border-[var(--quantum)] bg-[var(--quantum)] px-5 font-semibold text-white hover:bg-[var(--quantum-strong)] disabled:cursor-wait disabled:opacity-60"><Play className="size-3" />{isPending ? "Running optimization…" : "Run QAOA optimization"}</button></section>
 
-      {error && (
-        <div className="p-4 bg-red-50 text-red-600 rounded border border-red-100 text-[12px]">
-          {error}
-        </div>
-      )}
+    {error && <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-[11px] text-red-700"><strong>Optimization unavailable.</strong> {error}</div>}
 
-      {result && (
-        <>
-          <section className="space-y-3">
-            <SectionHeading eyebrow="01 / execution" title="Optimization metadata" />
-            <div className="panel flex gap-8 p-5 text-[11px]">
-              <div><span className="tech-label block mb-1">Alerts Considered</span><span className="font-mono">{result.metadata.alertsConsidered}</span></div>
-              <div><span className="tech-label block mb-1">QAOA Depth</span><span className="font-mono">{result.metadata.qaoaDepth}</span></div>
-              <div><span className="tech-label block mb-1">Objective Value</span><span className="font-mono">{metric(result.metadata.objectiveValue)}</span></div>
-            </div>
-          </section>
-
-          <section className="space-y-3">
-            <SectionHeading eyebrow="02 / comparison" title="Classical vs QAOA Ranking" />
-            
-            {result.metadata.alertsConsidered === 0 ? (
-               <div className="panel p-8 text-center text-[var(--text-muted)] text-[12px]">No active alerts to prioritize.</div>
-            ) : (
-               <div className="grid gap-6 lg:grid-cols-2">
-                 <div className="panel overflow-hidden">
-                   <div className="bg-[var(--surface-elevated)] border-b border-border px-4 py-3 tech-label">Classical Ranking</div>
-                   <div className="divide-y divide-border">
-                     {result.classicalRanking.map((item, i) => (
-                       <div key={item.alertId} className="p-4">
-                         <div className="flex justify-between items-center mb-3">
-                           <div className="font-mono font-bold text-[13px]">#{i + 1} {item.alertId}</div>
-                           <div className="tech-label text-[var(--medium)]">Score: {metric(item.priorityScore)}</div>
-                         </div>
-                         <ul className="text-[10px] space-y-1 text-[var(--text-muted)] font-mono bg-gray-50 p-2 rounded">
-                           {item.reasoning.map((r, idx) => <li key={idx}>- {r}</li>)}
-                         </ul>
-                       </div>
-                     ))}
-                   </div>
-                 </div>
-
-                 <div className="panel overflow-hidden border-[var(--accent)]">
-                   <div className="bg-[#f4f7fc] border-b border-[var(--accent)]/20 px-4 py-3 tech-label text-[#214f9d]">QAOA Ranking</div>
-                   <div className="divide-y divide-[var(--accent)]/10">
-                     {result.qaoaRanking.map((item, i) => (
-                       <div key={item.alertId} className="p-4">
-                         <div className="flex justify-between items-center mb-3">
-                           <div className="font-mono font-bold text-[13px] text-[#193250]">#{i + 1} {item.alertId}</div>
-                           <div className="tech-label text-[#214f9d]">Prob: {metric(item.probability ?? 0)}</div>
-                         </div>
-                         <ul className="text-[10px] space-y-1 text-[#4a6b9a] font-mono bg-white p-2 rounded border border-[var(--accent)]/10">
-                           {item.reasoning.map((r, idx) => <li key={idx}>- {r}</li>)}
-                         </ul>
-                       </div>
-                     ))}
-                   </div>
-                 </div>
-               </div>
-            )}
-          </section>
-        </>
-      )}
-    </div>
-  );
+    {result && <><section className="space-y-3"><SectionHeading eyebrow="08 / Execution" title="Optimization metadata" description="Values returned by the existing QAOA API" /><div className="panel grid gap-4 p-5 sm:grid-cols-2 xl:grid-cols-5">{[
+      ["Alerts analyzed", result.metadata.alertsConsidered], ["QAOA depth", result.metadata.qaoaDepth], ["Circuit shots", result.metadata.shots], ["Objective value", metric(result.metadata.objectiveValue)], ["Optimizer", result.metadata.optimizerSuccess ? "Converged" : "Not converged"],
+    ].map(([label, value]) => <div key={String(label)}><span className="tech-label block">{label}</span><span className="mt-2 block font-mono text-[12px] font-semibold">{value}</span></div>)}</div></section><section className="space-y-3"><SectionHeading eyebrow="09 / Comparison" title="Classical priority vs QAOA priority" description="Rankings use the same persisted alert inputs and deterministic explanation factors" />{result.metadata.alertsConsidered === 0 ? <div className="panel p-8 text-center text-[11px] text-[var(--text-muted)]">No active alerts are available to prioritize.</div> : <div className="grid gap-5 lg:grid-cols-2"><Ranking title="Classical priority" items={result.classicalRanking} /><Ranking title="QAOA priority" items={result.qaoaRanking} quantum /></div>}</section><p className="flex items-center gap-2 rounded-xl border border-[var(--quantum-border)] bg-[var(--quantum-soft)] px-4 py-3 text-[9px] font-medium text-[var(--quantum-strong)]"><Atom className="size-3.5" />Experimental quantum analysis. No quantum advantage is claimed.</p></>}
+  </div>;
 }
