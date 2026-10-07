@@ -10,7 +10,8 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  const system = await getSentinelDataSource().getSystemStatus();
+  const source = getSentinelDataSource();
+  const system = await source.getSystemStatus().catch(() => ({ mode: source.mode, data: { label: source.mode === "http" ? "Configured API" : "Fixture", status: "unavailable" }, database: { label: "Database", status: "unknown" }, model: { label: "Model", status: "unknown" }, operator: { label: "Analyst", session: "unavailable" } }));
   return (
     <html lang="en">
       <body><AppShell system={system}><div className="page-enter">{children}</div></AppShell></body>

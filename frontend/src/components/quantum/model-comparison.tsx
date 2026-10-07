@@ -1,0 +1,14 @@
+"use client";
+import { useState } from "react";
+import type { QuantumComparison } from "@/domain/sentinel";
+
+export function ModelComparison({ data }: { data: QuantumComparison }) {
+  const [selected, setSelected] = useState(0);
+  const models = [
+    { name: data.classicalModel.model, family: "Classical", result: data.classicalModel.prediction, score: data.classicalModel.anomalyScore, meaning: data.classicalModel.scoreMeaning, details: data.classicalModel, experimental: false },
+    { name: data.quantumKernel.model, family: "Quantum kernel", result: data.quantumKernel.interpretation, score: data.quantumKernel.similarityToNormalBaseline, meaning: data.quantumKernel.scoreMeaning, details: data.quantumKernel, experimental: true },
+    { name: data.vqc.modelType, family: "Quantum classifier", result: data.vqc.prediction, score: data.vqc.modelScore, meaning: data.vqc.scoreMeaning, details: data.vqc, experimental: true },
+  ];
+  const model = models[selected];
+  return <div><div className="grid gap-3 lg:grid-cols-3">{models.map((item, index) => <button key={item.family} type="button" className="panel model-choice tilt-card p-5" aria-pressed={selected === index} aria-controls="model-detail" onClick={() => setSelected(index)}><span className="tech-label">{item.family}</span><h3 className="mt-2 text-base font-semibold">{item.name}</h3><div className="mt-5 flex items-end justify-between gap-3"><span className="text-[11px] text-[var(--text-secondary)]">{item.experimental ? "Experimental simulator" : "Production detector"}</span><span className="text-2xl font-semibold tabular">{item.score?.toFixed(3) ?? "—"}</span></div><span className="mt-3 block text-[11px] text-[var(--accent)]">{selected === index ? "Details selected" : "Explore model →"}</span></button>)}</div><div id="model-detail" className="panel mt-3 p-5" aria-live="polite"><div key={model.name} className="model-details"><h3 className="font-semibold">{model.name} · {model.result}</h3><p className="mt-2 text-[12px] leading-5 text-[var(--text-secondary)]">{model.meaning}</p><dl className="mt-4 grid gap-4 md:grid-cols-3"><div><dt className="tech-label">Dimensions</dt><dd className="mt-1">{model.details.featureDimensions}</dd></div><div><dt className="tech-label">Execution backend</dt><dd className="mt-1 text-[11px]">{model.details.executionBackend}</dd></div><div><dt className="tech-label">Status</dt><dd className="mt-1 text-[11px]">{model.experimental ? "Experimental · no production risk contribution" : "Classical model"}</dd></div></dl><p className="mt-4 text-[11px] leading-5 text-[var(--text-secondary)]"><strong>Features used: </strong>{model.details.featuresUsed.join(" · ")}</p></div></div><p className="mt-3 text-[11px] text-[var(--quantum-strong)]">Experimental quantum analysis. No quantum advantage is claimed.</p></div>;
+}

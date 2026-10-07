@@ -1,3 +1,4 @@
+import { StoryJourney } from "./story-journey";
 import Link from "next/link";
 import { ExternalLink } from "lucide-react";
 import type { MitreReport } from "@/domain/sentinel";
@@ -22,6 +23,7 @@ export function ThreatStoryPanel({ report, compact = false }: { report: MitreRep
         </div>
       </div>
 
+      <StoryJourney key={report.subjectId} report={report} />
       <div className="grid gap-0 divide-y divide-border lg:grid-cols-[1.1fr_0.9fr] lg:divide-x lg:divide-y-0">
         <div className="p-5">
           <h3 className="tech-label">Ordered timeline</h3>
@@ -44,7 +46,7 @@ export function ThreatStoryPanel({ report, compact = false }: { report: MitreRep
           {report.mappings.length ? <div className="mt-4 space-y-3">{report.mappings.map((mapping) => (
             <article key={mapping.techniqueId} className="rounded-md border border-border bg-background p-4">
               <div className="flex items-start justify-between gap-3"><div><span className="font-mono text-[10px] font-semibold text-[var(--accent-strong)]">{mapping.techniqueId}</span><h4 className="mt-1 text-[12px] font-semibold">{mapping.techniqueName}</h4></div><span className="rounded-sm bg-[var(--surface-selected)] px-2 py-1 font-mono text-[8px] uppercase text-[var(--text-secondary)]">{mapping.confidence}</span></div>
-              <p className="mt-2 text-[10px] leading-4 text-[var(--text-secondary)]">{mapping.explanation}</p>
+              <details className="mt-3 text-[11px] leading-5 text-[var(--text-secondary)]"><summary className="cursor-pointer font-semibold">Evidence & confidence · {mapping.evidenceCount} items</summary><p className="mt-2">{mapping.explanation}</p><p className="mt-2">{mapping.observedBehaviour}</p><p className="mt-2">Rules: {mapping.supportingRuleNames.join(", ") || "No direct rules"}</p></details>
               <dl className="mt-3 grid gap-2 text-[9px] sm:grid-cols-2"><div><dt className="text-[var(--text-muted)]">Tactic</dt><dd className="mt-0.5 font-medium">{mapping.tactic}</dd></div><div><dt className="text-[var(--text-muted)]">Evidence</dt><dd className="mt-0.5 font-mono">{mapping.evidenceCount} items</dd></div></dl>
               <Link href={`/threat-intelligence?technique=${mapping.techniqueId}`} className="mt-3 inline-flex items-center gap-1 text-[9px] text-[var(--accent-strong)] hover:text-foreground">Technique detail <ExternalLink className="size-2.5" aria-hidden="true" /></Link>
             </article>

@@ -1,3 +1,5 @@
+import { InvestigationDrawer } from "@/components/threats/investigation-drawer";
+import { RiskOrb } from "@/components/prism/risk-orb";
 import type { Metadata } from "next";
 import { ThreatFilterBar } from "@/components/threats/threat-filter-bar";
 import { ThreatQueue } from "@/components/threats/threat-queue";
@@ -42,11 +44,10 @@ export default async function ThreatsPage({ searchParams }: { searchParams: Sear
       <ThreatFilterBar q={q} risk={risk} status={status} />
       <ThreatQueue threats={threats} focusedId={focus} />
       {focusedThreat && containment && <>
-        <Link href="/threats" aria-label="Close investigation drawer" className="fixed inset-0 z-40 bg-[#10233d]/18 backdrop-blur-[1px]" />
-        <aside aria-label={`Investigation for ${focusedThreat.alertId}`} className="fixed inset-y-0 right-0 z-50 w-full max-w-[940px] overflow-y-auto border-l border-border bg-[var(--background)] p-4 shadow-[-22px_0_55px_rgb(16_36_62/0.16)] sm:p-6">
+        <InvestigationDrawer label={`Investigation for ${focusedThreat.alertId}`}>
           <div className="mb-5 flex items-start justify-between gap-4 border-b border-border pb-4"><div><div className="tech-label text-[var(--accent)]">Investigation workspace</div><h2 className="mt-2 text-[19px] font-bold tracking-[-0.03em]">{focusedThreat.employeeName} · {focusedThreat.title}</h2><p className="mt-1 font-mono text-[9px] text-[var(--text-muted)]">{focusedThreat.alertId} · RISK {focusedThreat.riskScore.toFixed(0)} · {focusedThreat.status}</p></div><Link href="/threats" aria-label="Close investigation" className="grid size-9 shrink-0 place-items-center rounded-xl border border-border bg-white text-[var(--text-secondary)] hover:bg-[var(--surface-hover)]"><X className="size-4" /></Link></div>
-          <div className="space-y-5">{mitre && <ThreatStoryPanel report={mitre} compact />}<ContainmentPanel threat={focusedThreat} initialState={containment} initialHistory={responseHistory.items} mitre={mitre} /></div>
-        </aside>
+          <div className="mb-5 flex items-center gap-5"><RiskOrb score={focusedThreat.riskScore} label={`${focusedThreat.riskLevel} risk`} /><div><p className="text-sm font-semibold">{focusedThreat.employeeName}</p><p className="mt-1 text-[12px] text-[var(--text-secondary)]">{focusedThreat.primaryEvidence?.reason ?? "No rule evidence persisted"}</p></div></div><div className="space-y-5">{mitre && <ThreatStoryPanel report={mitre} compact />}<ContainmentPanel threat={focusedThreat} initialState={containment} initialHistory={responseHistory.items} mitre={mitre} /></div>
+        </InvestigationDrawer>
       </>}
     </div>
   );

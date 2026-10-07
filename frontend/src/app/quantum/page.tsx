@@ -1,3 +1,5 @@
+import { QuantumCore } from "@/components/prism/quantum-core";
+import { ModelComparison } from "@/components/quantum/model-comparison";
 import type { Metadata } from "next";
 import { Atom, Binary, Cpu, FlaskConical, ShieldOff, Sparkles, Workflow } from "lucide-react";
 import { getSentinelDataSource } from "@/data/data-source";
@@ -36,18 +38,19 @@ export default async function QuantumAnalysisPage({ searchParams }: { searchPara
         [Cpu, "Quantum backend", status.backend], [Binary, "Qubits", String(status.qubits)],
         [Workflow, "Quantum kernel", status.quantumKernelStatus], [FlaskConical, "VQC", status.vqcStatus],
         [Sparkles, "QAOA", qaoaStatus.experimental ? "Experimental" : "Unavailable"],
-        [ShieldOff, "Production risk", status.affectsProductionRisk ? "Enabled" : "Disabled"],
-      ].map(([Icon, label, value]) => <article key={String(label)} className={`panel interactive-panel p-4 ${label === "Production risk" ? "border-[var(--low)]/30" : ""}`}><div className="flex items-center gap-2 text-[var(--quantum)]"><Icon className="size-4" /><span className="tech-label">{String(label)}</span></div><div className={`mt-3 text-[12px] font-semibold leading-5 ${label === "Production risk" ? "text-[var(--low)]" : ""}`}>{String(value)}</div></article>)}
+        [ShieldOff, "Production Risk Contribution", status.affectsProductionRisk ? "Enabled" : "Disabled"],
+      ].map(([Icon, label, value]) => <article key={String(label)} className={`panel tilt-card p-4 ${label === "Production Risk Contribution" ? "border-[var(--low)]/30" : ""}`}><div className="flex items-center gap-2 text-[var(--quantum)]"><Icon className="size-4" /><span className="tech-label">{String(label)}</span></div><div className={`mt-3 text-[12px] font-semibold leading-5 ${label === "Production Risk Contribution" ? "text-[var(--low)]" : ""}`}>{String(value)}</div></article>)}
     </section>
 
     <section className="panel p-4">
       <form className="flex flex-col gap-3 sm:flex-row sm:items-end">
         <label className="flex-1"><span className="tech-label">Select event</span><select name="eventId" defaultValue={selectedEventId} className="control mt-2 w-full px-3 font-mono text-[11px]">{events.items.map((event) => <option key={event.eventId} value={event.eventId}>{event.eventId} · {event.employeeName} · {event.activityType} · risk {event.riskScore?.toFixed(0) ?? "—"}</option>)}</select></label>
-        <button className="control bg-[var(--accent)] px-5 font-semibold text-white hover:bg-[var(--accent-strong)]">Run analysis</button>
+        <button disabled={!events.items.length || status.status !== "ready"} className="magnetic prism-button disabled:opacity-50 px-5 font-semibold text-white hover:bg-[var(--accent-strong)]">Run Quantum Analysis</button>
       </form>
     </section>
 
-    {!analysis ? <section className="panel border-[var(--medium)]/30 p-8 text-center"><Atom className="mx-auto size-8 text-[var(--medium)]" /><h2 className="mt-3 text-[14px] font-semibold">Live quantum analysis is unavailable in fixture mode</h2><p className="mx-auto mt-2 max-w-[620px] text-[11px] leading-5 text-[var(--text-muted)]">{status.reason ?? "Start the FastAPI service and set SENTINEL_DATA_SOURCE=http to execute Qiskit circuits against persisted events."}</p></section> : <>
+    {!analysis ? <section className="panel border-[var(--medium)]/30 p-8 text-center"><Atom className="mx-auto size-8 text-[var(--medium)]" /><h2 className="mt-3 text-[14px] font-semibold">Quantum analysis is unavailable</h2><p className="mx-auto mt-2 max-w-[620px] text-[11px] leading-5 text-[var(--text-muted)]">{data.mode === "fixture" ? "Fixture mode contains no executed quantum results. Connect the configured backend to analyze persisted events." : "No analysis was returned. Check backend availability or select another persisted event."}</p></section> : <>
+      <section className="panel prism-hero" key={analysis.eventId}><div><div className="tech-label text-[var(--quantum-strong)]">Encoded event / {analysis.eventId}</div><h2 className="mt-3 text-2xl font-semibold">Four signals. One quantum state.</h2><p className="mt-3 max-w-md text-[12px] leading-6 text-[var(--text-secondary)]">Select a qubit to inspect its behavioural signal. These values are returned by the analysis backend.</p><p className="mt-3 text-[11px] text-[var(--text-muted)]">{analysis.circuit.backend}</p><p className="mt-2 text-[10px] text-[var(--quantum-strong)]">Result reveal animation · not execution timing</p></div><QuantumCore circuit={analysis.circuit} /></section>
       <section className="grid gap-5 xl:grid-cols-[minmax(0,1.03fr)_minmax(0,1.1fr)]">
         <div className="min-w-0 space-y-3"><SectionHeading eyebrow="01 / Encoding" title="Quantum feature encoding" description={`${analysis.eventId} · ${analysis.employee.employeeName} · ${analysis.employee.department}`} /><FeatureEncodingVisual circuit={analysis.circuit} /></div>
         <div className="min-w-0 space-y-3"><SectionHeading eyebrow="02 / Circuit" title="Four-qubit feature map" description="Hover or focus a gate to inspect its rotation purpose" /><QuantumCircuitVisual circuit={analysis.circuit} /></div>
@@ -58,18 +61,14 @@ export default async function QuantumAnalysisPage({ searchParams }: { searchPara
         <article className="panel p-5"><SectionHeading eyebrow="04 / Variational classifier" title="VQC inference" /><div className="mt-5 flex items-end justify-between gap-4"><div><div className={`font-mono text-[26px] font-semibold ${analysis.vqc.prediction === "SUSPICIOUS" ? "text-[var(--high)]" : "text-[var(--low)]"}`}>{analysis.vqc.prediction}</div><div className="mt-1 tech-label">Prediction</div></div><div className="text-right"><div className="font-mono text-[26px] font-semibold">{metric(analysis.vqc.modelScore)}</div><div className="mt-1 tech-label">Model score</div></div></div><dl className="mt-5 grid gap-3 border-t border-border pt-4 text-[10px] sm:grid-cols-2"><div><dt className="tech-label">Ansatz</dt><dd className="mt-1 leading-4">{analysis.vqc.ansatz}</dd></div><div><dt className="tech-label">Training</dt><dd className="mt-1 leading-4">{analysis.vqc.trainingRows} representative rows · {analysis.vqc.optimizer}</dd></div></dl><p className="mt-3 text-[10px] leading-5 text-[var(--text-muted)]">{analysis.vqc.scoreMeaning}</p></article>
       </section>
 
-      <section className="space-y-3"><SectionHeading eyebrow="05 / Comparison" title="Classical vs quantum" description="The same event, evaluated independently by three models" /><ComparisonBanner /><div className="grid gap-3 lg:grid-cols-3">{[
-        { title: "Classical model", name: analysis.comparison.classicalModel.model, prediction: analysis.comparison.classicalModel.prediction, score: analysis.comparison.classicalModel.anomalyScore, dimensions: analysis.comparison.classicalModel.featureDimensions, backend: analysis.comparison.classicalModel.executionBackend },
-        { title: "Quantum model 1", name: analysis.comparison.quantumKernel.model, prediction: "SIMILARITY", score: analysis.comparison.quantumKernel.similarityToNormalBaseline, dimensions: analysis.comparison.quantumKernel.featureDimensions, backend: analysis.comparison.quantumKernel.executionBackend },
-        { title: "Quantum model 2", name: analysis.comparison.vqc.modelType, prediction: analysis.comparison.vqc.prediction, score: analysis.comparison.vqc.modelScore, dimensions: analysis.comparison.vqc.featureDimensions, backend: analysis.comparison.vqc.executionBackend },
-      ].map((item) => <article key={item.title} className="panel p-5"><div className="tech-label">{item.title}</div><h3 className="mt-2 text-[13px] font-semibold">{item.name}</h3><div className="mt-5 flex items-end justify-between"><span className="font-mono text-[12px] font-semibold">{item.prediction}</span><span className="font-mono text-[24px] font-semibold">{item.score === null ? "—" : metric(item.score)}</span></div><dl className="mt-4 space-y-2 border-t border-border pt-3 text-[10px]"><div className="flex justify-between gap-3"><dt className="text-[var(--text-muted)]">Feature dimensions</dt><dd className="font-mono">{item.dimensions}</dd></div><div className="flex justify-between gap-3"><dt className="text-[var(--text-muted)]">Execution</dt><dd className="text-right">{item.backend}</dd></div></dl></article>)}</div><div className="rounded-lg border border-[var(--accent)]/20 bg-[var(--accent-dim)] px-4 py-3 text-[10px] font-medium text-[#214f9d]">{analysis.comparison.disclosure}</div></section>
+      <section className="space-y-3"><SectionHeading eyebrow="05 / Comparison" title="Classical vs quantum" description="The same event, evaluated independently by three models" /><ComparisonBanner /><ModelComparison data={analysis.comparison} /></section>
 
       <section className="grid gap-4 xl:grid-cols-[1.1fr_.9fr]">
         <div className="space-y-3"><SectionHeading eyebrow="06 / Similarity" title="Quantum threat similarity" description="Actual fidelity-kernel comparisons against representative encoded profiles" /><SimilarityVisual data={analysis.threatSimilarity} /></div>
         <div className="space-y-3"><SectionHeading eyebrow="07 / Guardrails" title="Experimental limitations" /><div className="panel p-5"><ul className="space-y-3 text-[10px] leading-5 text-[var(--text-muted)]">{analysis.limitations.map((item) => <li key={item} className="flex gap-2"><span className="text-[var(--medium)]">—</span><span>{item}</span></li>)}</ul></div></div>
       </section>
 
-      <QaoaSection initialStatus={qaoaStatus} initialLatest={qaoaLatest} />
     </>}
+    <QaoaSection initialStatus={qaoaStatus} initialLatest={qaoaLatest} available={data.mode === "http"} />
   </div>;
 }

@@ -1,5 +1,6 @@
+import { OverviewHero, ArchitectureFlow } from "@/components/prism/overview-hero";
 import Link from "next/link";
-import { Activity, ArrowRight, BrainCircuit, CircleAlert, Database, Info, ShieldCheck, Siren, Sparkles, TrendingUp, UsersRound } from "lucide-react";
+import { Activity, ArrowRight, CircleAlert, Info, Siren, Sparkles, TrendingUp, UsersRound } from "lucide-react";
 import { AverageRiskChart, DepartmentRiskChart, DetectionContributionChart, RiskDistributionChart, ThreatTrendChart, ThreatTypesChart } from "@/components/overview/overview-charts";
 import { getSentinelDataSource } from "@/data/data-source";
 import { AnimatedNumber } from "@/components/system/animated-number";
@@ -40,8 +41,8 @@ function fallbackThreatTrend(threats: ThreatSummary[]): ThreatTrendPoint[] {
 }
 
 function MetricCard({ icon: Icon, label, value, decimals = 0, description, tone = "blue" }: { icon: typeof Activity; label: string; value: number; decimals?: number; description: string; tone?: "blue" | "orange" | "red" | "green" }) {
-  const tones = { blue: "bg-[#eaf2ff] text-[#2563eb]", orange: "bg-[#fff3e9] text-[#ea6b22]", red: "bg-[#fff0f1] text-[#dc3545]", green: "bg-[#eaf8f1] text-[#1f9d68]" };
-  return <article className="panel interactive-panel min-w-0 p-4"><div className="flex items-start justify-between gap-3"><div><p className="text-[11px] font-semibold text-[var(--text-secondary)]">{label}</p><p className="mt-2 text-[25px] font-bold tracking-[-0.035em] tabular"><AnimatedNumber value={value} decimals={decimals} /></p></div><span className={`grid size-9 shrink-0 place-items-center rounded-xl ${tones[tone]}`}><Icon className="size-4" /></span></div><p className="mt-3 text-[9px] leading-4 text-[var(--text-muted)]">{description}</p></article>;
+  const tones = { blue: "metric-tone", orange: "metric-tone-orange", red: "metric-tone-red", green: "metric-tone-green" };
+  return <article className="panel tilt-card min-w-0 p-5"><div className="flex items-start justify-between gap-3"><div><p className="text-[11px] font-semibold text-[var(--text-secondary)]">{label}</p><p className="metric-value mt-2 text-[30px] font-bold tracking-[-0.035em] tabular"><AnimatedNumber value={value} decimals={decimals} /></p></div><span className={`grid size-9 shrink-0 place-items-center rounded-xl ${tones[tone]}`}><Icon className="size-4" /></span></div><p className="mt-3 text-[9px] leading-4 text-[var(--text-muted)]">{description}</p></article>;
 }
 
 function CardHeader({ title, description, info }: { title: string; description: string; info?: string }) {
@@ -50,7 +51,7 @@ function CardHeader({ title, description, info }: { title: string; description: 
 
 export default async function OverviewPage() {
   const source = getSentinelDataSource();
-  const [overview, threats, system, counts, users] = await Promise.all([source.getOverview(), source.listThreats(), source.getSystemStatus(), source.getCounts(), source.listUsers({ sort: "risk", direction: "desc", pageSize: 100 })]);
+  const [overview, threats, system, counts, users, mitre, quantum] = await Promise.all([source.getOverview(), source.listThreats(), source.getSystemStatus(), source.getCounts(), source.listUsers({ sort: "risk", direction: "desc", pageSize: 100 }), source.getMitreOverview(), source.getQuantumStatus()]);
   const total = overview.totalEvents ?? counts.detections;
   const averageRisk = overview.averageRiskScore ?? overview.riskActivity.reduce((sum, point) => sum + point.averageRisk, 0) / Math.max(1, overview.riskActivity.length);
   const activeAlerts = overview.activeAlerts ?? Object.values(overview.activeThreats).reduce((sum, value) => sum + value, 0);
@@ -65,22 +66,18 @@ export default async function OverviewPage() {
   const criticalAlerts = threats.filter((threat) => threat.riskLevel === "Critical").slice(0, 5);
 
   return <div className="mx-auto max-w-[1560px] space-y-5">
-    <section className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
-      <div><p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--accent)]">Quantum Glass Command Center</p><h1 className="mt-2 text-[30px] font-bold tracking-[-0.045em]">SentinelAI <span className="quantum-text">Q</span></h1><p className="mt-1 text-[13px] font-semibold text-[var(--text-secondary)]">Hybrid Quantum-Classical Threat Intelligence</p><p className="mt-2 max-w-2xl text-[11px] leading-5 text-[var(--text-muted)]">Explainable insider-threat detection, experimental quantum analysis, threat intelligence, and response orchestration.</p></div>
-      <div className="flex flex-wrap gap-2" aria-label="Live system status">
-        <span className="inline-flex items-center gap-2 rounded-full border border-[#dce9e3] bg-white px-3 py-2 text-[10px] font-semibold"><Database className="size-3.5 text-[var(--low)]" />Database Connected</span>
-        <span className="inline-flex items-center gap-2 rounded-full border border-[#dfe7f6] bg-white px-3 py-2 text-[10px] font-semibold"><BrainCircuit className="size-3.5 text-[var(--accent)]" />AI Model {system.model.status === "ready" ? "Ready" : titleCase(system.model.status)}</span>
-        <span className="inline-flex items-center gap-2 rounded-full border border-[#dce9e3] bg-white px-3 py-2 text-[10px] font-semibold"><ShieldCheck className="size-3.5 text-[var(--low)]" />System Healthy</span>
-      </div>
-    </section>
+    <OverviewHero mode={source.mode === "http" ? "Persisted API" : "Fixture"} model={system.model.status} />
 
-    <section aria-label="Security key metrics" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+    <section aria-label="Security key metrics" className="bento-metrics">
       <MetricCard icon={Activity} label="Total Events" value={total} description="Events analysed by SentinelAI" />
       <MetricCard icon={CircleAlert} label="Active Alerts" value={activeAlerts} description="Require investigation" tone="orange" />
-      <MetricCard icon={TrendingUp} label="High-Risk Events" value={highRisk} description="High and Critical anomalies" tone="orange" />
+      <MetricCard icon={TrendingUp} label="MITRE Techniques" value={mitre.mappedTechniqueCount} description="Observed evidence-backed mappings" />
       <MetricCard icon={Siren} label="Critical Threats" value={critical} description="Immediate attention required" tone="red" />
-      <MetricCard icon={Sparkles} label="Average Risk Score" value={averageRisk} decimals={1} description="Across analysed activity" tone="green" />
+      <MetricCard icon={Sparkles} label="Threat Stories" value={mitre.storyCount} description={`${highRisk} high-risk events · correlated investigation context`} tone="green" />
+      <article className="panel tilt-card p-5"><p className="tech-label text-[var(--quantum-strong)]">Quantum model</p><p className="mt-3 text-xl font-semibold capitalize">{quantum.status}</p><p className="mt-2 text-[10px] text-[var(--text-muted)]">{quantum.qubits} qubits · production risk disabled</p><Link href="/quantum" className="mt-3 inline-flex items-center gap-2 text-[11px] font-semibold text-[var(--quantum-strong)]">Open analysis <ArrowRight size={12} /></Link></article>
     </section>
+
+    <ArchitectureFlow />
 
     <section className="grid gap-4 xl:grid-cols-[minmax(0,1.7fr)_minmax(280px,.75fr)]">
       <article className="panel p-5"><CardHeader title="Threat Activity Trend" description="Detected Medium, High and Critical activity across the available period" /><div className="mt-3"><ThreatTrendChart points={trend} /></div></article>
@@ -103,7 +100,7 @@ export default async function OverviewPage() {
     </section>
 
     <section className="grid gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(320px,.85fr)]">
-      <article className="panel p-5"><div className="flex items-start justify-between gap-4"><CardHeader title="Recent Critical Alerts" description="Immediate investigations with the highest persisted severity" /><Link href="/threats?risk=Critical" className="shrink-0 text-[10px] font-bold text-[var(--accent)] hover:text-[var(--accent-strong)]">View All Alerts</Link></div><div className="mt-4 grid gap-3 sm:grid-cols-2">{criticalAlerts.map((alert) => <Link key={alert.alertId} href={`/threats?focus=${alert.alertId}#${alert.alertId}`} className="interactive-panel rounded-xl border border-border p-4"><div className="flex items-center justify-between gap-2"><span className="rounded-full bg-[#fff0f1] px-2 py-1 text-[8px] font-bold uppercase tracking-wider text-[var(--critical)]">{alert.riskLevel}</span><span className="text-[9px] text-[var(--text-muted)]">{new Date(alert.occurredAt).toLocaleDateString("en", { day: "2-digit", month: "short" })}</span></div><h3 className="mt-3 text-[11px] font-bold">{alert.title}</h3><p className="mt-1 text-[9px] text-[var(--text-secondary)]">{alert.employeeName} · {alert.department}</p><div className="mt-3 flex items-end justify-between"><span className="text-[9px] font-semibold text-[var(--accent)]">View Investigation</span><span className="text-[18px] font-bold text-[var(--critical)] tabular">{alert.riskScore.toFixed(0)}</span></div></Link>)}</div></article>
+      <article className="panel p-5"><div className="flex items-start justify-between gap-4"><CardHeader title="Recent Critical Alerts" description="Immediate investigations with the highest persisted severity" /><Link href="/threats?risk=Critical" className="shrink-0 text-[10px] font-bold text-[var(--accent)] hover:text-[var(--accent-strong)]">View All Alerts</Link></div><div className="mt-4 grid gap-3 sm:grid-cols-2">{criticalAlerts.map((alert) => <Link key={alert.alertId} href={`/threats?focus=${alert.alertId}#${alert.alertId}`} className="tilt-card rounded-xl border border-border p-4"><div className="flex items-center justify-between gap-2"><span className="rounded-full bg-[#fff0f1] px-2 py-1 text-[8px] font-bold uppercase tracking-wider text-[var(--critical)]">{alert.riskLevel}</span><span className="text-[9px] text-[var(--text-muted)]">{new Date(alert.occurredAt).toLocaleDateString("en", { day: "2-digit", month: "short" })}</span></div><h3 className="mt-3 text-[11px] font-bold">{alert.title}</h3><p className="mt-1 text-[9px] text-[var(--text-secondary)]">{alert.employeeName} · {alert.department}</p><div className="mt-3 flex items-end justify-between"><span className="text-[9px] font-semibold text-[var(--accent)]">View Investigation</span><span className="text-[18px] font-bold text-[var(--critical)] tabular">{alert.riskScore.toFixed(0)}</span></div></Link>)}</div></article>
       <article className="panel p-5"><CardHeader title="Recent Security Activity" description="Latest important persisted detections" /><div className="relative mt-5 space-y-4 before:absolute before:bottom-2 before:left-[5px] before:top-2 before:w-px before:bg-border">{recent.map((alert) => <Link key={alert.alertId} href={`/threats?focus=${alert.alertId}#${alert.alertId}`} className="relative flex gap-4 pl-0"><span className="relative z-10 mt-1 size-[11px] shrink-0 rounded-full border-2 border-white" style={{ background: riskColor[alert.riskLevel], boxShadow: `0 0 0 1px ${riskColor[alert.riskLevel]}` }} /><span className="min-w-0 flex-1"><span className="block text-[10px] font-bold">{alert.title}</span><span className="mt-1 block text-[9px] text-[var(--text-muted)]">{alert.employeeName} · {new Date(alert.occurredAt).toLocaleString("en", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}</span><span className="mt-1 block text-[9px] font-semibold" style={{ color: riskColor[alert.riskLevel] }}>Risk {alert.riskScore.toFixed(0)} · {alert.riskLevel}</span></span></Link>)}</div></article>
     </section>
   </div>;

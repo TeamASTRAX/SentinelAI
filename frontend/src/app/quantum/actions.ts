@@ -7,7 +7,7 @@ export async function runQaoaOptimization(): Promise<{ ok: true; result: QaoaOpt
   try {
     const result = await getSentinelDataSource().runQuantumOptimization();
     return { ok: true, result };
-  } catch (error) {
-    return { ok: false, error: error instanceof Error ? error.message : "Quantum response optimization could not be completed." };
+  } catch {
+    return { ok: false, error: "The backend could not complete this run. Check service availability and try again." };
   }
 }

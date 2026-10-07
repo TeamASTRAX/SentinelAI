@@ -203,10 +203,13 @@ export function GraphDashboardClient({
         onClearFilters={handleClearFilters}
       />
 
+      <label className="flex flex-wrap items-center gap-3 text-[11px] text-[var(--text-secondary)]">Inspect an entity with keyboard
+        <select aria-label="Inspect graph entity" className="control max-w-full px-3" value={selectedNode?.nodeId ?? ""} onChange={event => handleSelectNode(initialGraphData.nodes.find(node => node.nodeId === event.target.value) ?? null)}><option value="">Select entity</option>{filteredNodes.map(node => <option key={node.nodeId} value={node.nodeId}>{node.nodeType} · {node.label}</option>)}</select>
+      </label>
       {/* 3. Main Workspace: Interactive Canvas + Side Inspector (Requirement 35) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
         {/* Graph Canvas */}
-        <div className={selectedNode ? "lg:col-span-8 xl:col-span-9 transition-all" : "lg:col-span-12 transition-all"}>
+        <div className={selectedNode ? "min-w-0 lg:col-span-8 xl:col-span-9 transition-all" : "min-w-0 lg:col-span-12 transition-all"}>
           <div className="panel p-4 bg-[var(--surface)] border border-[var(--border)] rounded-lg shadow-xs space-y-3">
             <div className="flex items-center justify-between border-b border-[var(--border)] pb-2.5">
               <div>

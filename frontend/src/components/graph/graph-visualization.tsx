@@ -10,6 +10,8 @@ import { NODE_CONFIGS, RISK_BORDER_CONFIGS, getNodeRiskLevel } from "./graph-typ
 
 echarts.use([GraphChart, LegendComponent, TooltipComponent, CanvasRenderer]);
 
+function escapeHtml(value: string) { return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"); }
+
 interface GraphVisualizationProps {
   nodes: GraphNode[];
   edges: GraphEdge[];
@@ -34,6 +36,8 @@ export function GraphVisualization({
   const host = useRef<HTMLDivElement>(null);
   const chartInstance = useRef<echarts.ECharts | null>(null);
 
+  const positions = useRef(new Map<string, [number, number]>());
+
   const option = useCallback(() => {
     // 1. Transform Nodes with Category Fills and Separate Risk Borders
     const seriesData = nodes.map((n) => {
@@ -49,6 +53,7 @@ export function GraphVisualization({
 
       return {
         id: n.nodeId,
+        ...(positions.current.has(n.nodeId) ? { x: positions.current.get(n.nodeId)![0], y: positions.current.get(n.nodeId)![1], fixed: !rearrangeEnabled } : {}),
         name: n.label,
         category: n.nodeType,
         symbol: catConfig.symbol,
@@ -105,7 +110,9 @@ export function GraphVisualization({
 
     return {
       backgroundColor: "transparent",
+      animation: !window.matchMedia("(prefers-reduced-motion: reduce)").matches,
       animationDuration: 250,
+      animationDurationUpdate: 250,
       animationEasingUpdate: "cubicOut" as const,
       tooltip: {
         trigger: "item",
@@ -122,7 +129,7 @@ export function GraphVisualization({
             const cat = NODE_CONFIGS[raw.nodeType]?.label || raw.nodeType;
             const risk = getNodeRiskLevel(raw);
             return `
-              <div style="font-weight:600; font-size:12px; margin-bottom:4px;">${raw.label}</div>
+              <div style="font-weight:600; font-size:12px; margin-bottom:4px;">${escapeHtml(raw.label)}</div>
               <div style="color:#64748b; font-size:10.5px;">Type: <span style="font-weight:500; color:#10243e;">${cat}</span></div>
               ${risk ? `<div style="color:#64748b; font-size:10.5px;">Risk Level: <span style="font-weight:600; color:${risk === "Critical" ? "#dc2626" : risk === "High" ? "#ea580c" : "#10b981"};">${risk}</span></div>` : ""}
               <div style="color:#94a3b8; font-size:9.5px; margin-top:4px;">Click to view security relationships</div>
@@ -130,8 +137,8 @@ export function GraphVisualization({
           }
           if (params.dataType === "edge") {
             return `
-              <div style="font-size:11px; font-weight:600; color:#10243e;">${params.data.edgeType}</div>
-              <div style="font-size:10px; color:#64748b;">${params.data.source} → ${params.data.target}</div>
+              <div style="font-size:11px; font-weight:600; color:#10243e;">${escapeHtml(String(params.data.edgeType))}</div>
+              <div style="font-size:10px; color:#64748b;">${escapeHtml(String(params.data.source))} → ${escapeHtml(String(params.data.target))}</div>
             `;
           }
           return "";
@@ -139,6 +146,7 @@ export function GraphVisualization({
       },
       series: [
         {
+          id: "security-topology",
           type: "graph",
           layout: "force",
           roam: true,
@@ -189,7 +197,6 @@ export function GraphVisualization({
     chartInstance.current = chart;
     if (chartRef) chartRef.current = chart;
 
-    chart.setOption(option());
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     chart.on("click", (params: any) => {
@@ -224,7 +231,22 @@ export function GraphVisualization({
       chartInstance.current = null;
       if (chartRef) chartRef.current = null;
     };
-  }, [option, onSelectNode, chartRef]);
+  }, [onSelectNode, chartRef]);
+
+  useEffect(() => {
+    const chart = chartInstance.current;
+    if (!chart) return;
+    // Preserve rendered positions while selecting/filtering; graph data and rules are unchanged.
+    type GraphSeries = { getData(): { count(): number; getId(index: number): string; getItemLayout(index: number): [number, number] } };
+    const model = (chart as unknown as { getModel(): { getSeriesByIndex(index: number): GraphSeries | undefined } | undefined }).getModel();
+    const series = model?.getSeriesByIndex(0);
+    const data = series?.getData();
+    if (data) for (let index = 0; index < data.count(); index++) {
+      const point = data.getItemLayout(index);
+      if (point?.every(Number.isFinite)) positions.current.set(data.getId(index), [point[0], point[1]]);
+    }
+    chart.setOption(option());
+  }, [option]);
 
   return (
     <div className="relative h-[620px] w-full overflow-hidden rounded-xl border border-[var(--border)] bg-[#fbfcfe] shadow-xs">
@@ -239,7 +261,7 @@ export function GraphVisualization({
             Entity Categories
           </div>
           <div className="grid grid-cols-2 gap-x-3 gap-y-1.5">
-            {Object.values(NODE_CONFIGS).map((cat) => (
+            {Object.values(NODE_CONFIGS).filter(cat => nodes.some(node => node.nodeType === cat.name)).map((cat) => (
               <div key={cat.name} className="flex items-center gap-1.5 text-[11px] text-[var(--text-secondary)]">
                 <span
                   className="size-2.5 inline-block rounded-xs shrink-0"
